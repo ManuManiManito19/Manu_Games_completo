@@ -1,0 +1,74 @@
+<nav class="navbar-terminal">
+  <div class="nav-brand" routerLink="/">[ MANU_GAMES ]</div>
+
+  <form class="search-container" role="search" (submit)="$event.preventDefault(); ejecutarBusquedaEnter()">
+    <input 
+      type="text" 
+      class="input-terminal" 
+      placeholder="> BUSCAR EN EL CATÁLOGO..."
+      aria-label="Buscar en el catálogo"
+      name="busqueda"
+      [ngModel]="searchTerm"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    
+    <div class="search-results-dropdown" *ngIf="mostrarResultados">
+      <div *ngIf="resultadosBusqueda.length === 0" class="no-results">
+        > NO SE ENCONTRARON RESULTADOS
+      </div>
+      @for (juego of resultadosBusqueda; track juego.id) {
+        <button type="button" class="search-item" (click)="seleccionarJuego(juego)">
+          <span class="item-title">&gt; {{ juego.titulo }}</span>
+          <span class="item-price">${{ juego.precio }} MXN</span>
+        </button>
+      }
+    </div>
+  </form>
+
+  <div class="nav-actions">
+    
+    <!-- BOTÓN DE INICIAR SESIÓN (SI NO HAY SESIÓN ACTIVA) -->
+    <button *ngIf="!estaAutenticado" class="btn-terminal" routerLink="/login">[ INICIAR_SESIÓN ]</button>
+
+    <!-- BOTÓN CON FOTO Y GAMERTAG REAL (SI HAY SESIÓN ACTIVA) -->
+    <button *ngIf="estaAutenticado && perfil" class="btn-user-profile" (click)="toggleCuadroPerfil()">
+      <img [src]="perfil.avatarUrl" [alt]="perfil.gamertag" class="user-avatar-badge" />
+      <span class="user-gamertag-badge">[ {{ perfil.gamertag }} ]</span>
+    </button>
+  </div>
+</nav>
+
+<!-- MODAL / CUADRO EMERGENTE DE PERFIL -->
+<div class="user-dropdown-card" *ngIf="mostrarModalPerfil && estaAutenticado && perfil">
+  <div class="dropdown-header">
+    <div class="profile-main-info">
+      <img [src]="perfil.avatarUrl" [alt]="perfil.gamertag" class="profile-avatar-large" />
+      <div class="profile-text">
+        <span class="profile-label">> GAMERTAG_ACTIVO:</span>
+        <h4 class="profile-gamertag">{{ perfil.gamertag }}</h4>
+        <span class="profile-email-text">{{ perfil.email }}</span>
+      </div>
+    </div>
+    <button class="btn-close-sm" (click)="mostrarModalPerfil = false">[X]</button>
+  </div>
+
+  <hr class="divider-terminal" />
+
+  <div class="dropdown-body">
+    <button type="button" class="btn-terminal" (click)="irAMisPedidos()">[ Mis pedidos ]</button>
+
+    <!-- SECCIÓN TARJETA REGISTRADA -->
+    <div class="finance-item">
+      <span class="item-icon">💳</span>
+      <div class="item-details">
+        <span class="finance-label">> TARJETA INGRESADA:</span>
+        <span *ngIf="perfil.tarjetaGuardada" class="finance-value">{{ perfil.tarjetaGuardada }}</span>
+        <span *ngIf="!perfil.tarjetaGuardada" class="finance-value-none">SIN TARJETA VINCULADA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dropdown-footer">
+    <button class="btn-terminal btn-danger-sm" (click)="cerrarSesion()">[ CERRAR_SESIÓN ]</button>
+  </div>
+</div>

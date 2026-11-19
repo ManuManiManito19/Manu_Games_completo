@@ -1,0 +1,25 @@
+<!-- BANNER INTERACTIVO DE COOKIES (MÓDULO 6.3) -->
+<div class="cookie-banner-wrapper" *ngIf="mostrarBanner">
+  <div class="cookie-banner-box">
+    <div class="cookie-header">
+      <span class="cookie-title">&gt; SYSTEM_SECURITY // COOKIE_POLICY_NOTICE</span>
+      <button type="button" class="cookie-close-btn" (click)="acceptCookies()">[ X ]</button>
+    </div>
+
+    <div class="cookie-body">
+      <p class="cookie-text">
+        &gt; Utilizamos cookies técnicas y analíticas para optimizar la experiencia de usuario y el funcionamiento del carrito de compras. Al continuar navegando, aceptas nuestra 
+        <button type="button" class="cookie-link-btn" (click)="openPrivacyModal()">Política de Cookies y Aviso de Privacidad</button>.
+      </p>
+
+      <div class="cookie-actions">
+        <button type="button" class="btn-matrix-cookie accept" (click)="acceptCookies()">
+          [ ACEPTAR_COOKIES ]
+        </button>
+        <button type="button" class="btn-matrix-cookie decline" (click)="declineCookies()">
+          [ SOLO_ESENCIALES ]
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

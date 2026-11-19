@@ -1,0 +1,27 @@
+/* RESET Y BASE TEMA CIBERNETICO */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  background-color: #050505 !important;
+  color: #00ff66 !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Personalización de barra de desplazamiento estilo hacker */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00ff66;
+  border-radius: 2px;
+}

@@ -1,0 +1,178 @@
+<div class="inicio-container">
+  <h2 class="terminal-title">&gt;_ CATÁLOGO_MANU_GAMES</h2>
+
+  <div class="catalog-controls">
+    <div class="catalog-filter">
+      <label for="categoria-catalogo">Categoría</label>
+      <select id="categoria-catalogo" class="input-terminal"
+        [ngModel]="categoriaSeleccionada" (ngModelChange)="cambiarCategoria($event)">
+        <option value="">Todo el catálogo</option>
+        <optgroup label="Juegos">
+          <option value="juegos">Todos los juegos</option>
+          @for (genero of generos; track genero) {
+            <option [value]="genero">{{ genero }}</option>
+          }
+        </optgroup>
+        <optgroup label="Complementos">
+          <option value="complementos">Todos los complementos</option>
+          @for (categoria of categoriasComplementos; track categoria) {
+            <option [value]="categoria">{{ categoria }}</option>
+          }
+        </optgroup>
+      </select>
+    </div>
+    <p class="catalog-count" aria-live="polite">
+      {{ juegos.length }} {{ juegos.length === 1 ? 'producto' : 'productos' }}
+      @if (busqueda) { para «{{ busqueda }}» }
+    </p>
+    @if (categoriaSeleccionada || busqueda) {
+      <button type="button" class="btn-terminal" (click)="limpiarFiltros()">Limpiar filtros</button>
+    }
+  </div>
+
+  <div class="games-grid">
+    @for (juego of juegos; track juego.id) {
+      <article class="game-card">
+        <div class="card-image-container">
+          @if (juego.imagen) {
+            <img [src]="juego.imagen" alt="" class="game-image" loading="lazy" />
+          } @else if (juego.arte; as arte) {
+            <div class="product-art" aria-hidden="true">
+              <span>{{ arte.titulo }}</span>
+              <strong>{{ arte.detalle }}</strong>
+            </div>
+          }
+          <span class="category-badge">{{ juego.categoria }}</span>
+        </div>
+        <div class="card-header">
+          <h3>{{ juego.titulo }}</h3>
+        </div>
+        <div class="card-body">
+          <p>{{ juego.descripcion }}</p>
+          <p class="platform-info">{{ juego.plataforma }}</p>
+          <p class="stock-info">&gt; STOCK: {{ juego.stock }} UNIDADES</p>
+          <p class="price-tag">${{ juego.precio }} MXN</p>
+        </div>
+        <div class="card-footer">
+          <button type="button" class="btn-terminal" [disabled]="juego.stock <= 0" (click)="abrirMenuCompra(juego)">
+            {{ juego.stock > 0 ? '[ COMPRAR_AHORA ]' : '[ AGOTADO ]' }}
+          </button>
+        </div>
+      </article>
+    } @empty {
+      <p class="catalog-empty">No se encontraron productos con estos filtros.</p>
+    }
+  </div>
+
+  <!-- MODAL DE COMPRA Y VALIDACIÓN DE PAGO -->
+  <div class="modal-overlay" *ngIf="juegoSeleccionado">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>> MENÚ_DE_COMPRA: {{ juegoSeleccionado.titulo }}</h3>
+        <button class="btn-close" (click)="cerrarMenuCompra()">[X]</button>
+      </div>
+      
+      <div class="modal-body" *ngIf="!compraExitosa">
+        <div class="modal-game-info">
+          @if (juegoSeleccionado.imagen) {
+            <img [src]="juegoSeleccionado.imagen" alt="" class="modal-game-img" />
+          }
+          <div>
+            <p><strong>Categoría:</strong> {{ juegoSeleccionado.categoria }}</p>
+            <p><strong>Plataforma:</strong> {{ juegoSeleccionado.plataforma }}</p>
+            <h4 class="price-highlight">PRECIO TOTAL: ${{ juegoSeleccionado.precio }} MXN</h4>
+          </div>
+        </div>
+
+        <hr class="divider-terminal" />
+
+        <h4 class="payment-title">&gt; SELECCIONE_MÉTODO_DE_PAGO:</h4>
+        <p class="demo-payment">Compra de demostración. Usa datos ficticios.</p>
+
+        <div class="payment-selector">
+          <button 
+            type="button"
+            class="btn-payment" 
+            [class.active]="metodoPagoSeleccionado === 'TARJETA'"
+            (click)="metodoPagoSeleccionado = 'TARJETA'"
+          >
+            💳 TARJETA
+          </button>
+          <button 
+            type="button"
+            class="btn-payment" 
+            [class.active]="metodoPagoSeleccionado === 'OXXO'"
+            (click)="metodoPagoSeleccionado = 'OXXO'"
+          >
+            🏪 OXXO PAY
+          </button>
+          <button 
+            type="button"
+            class="btn-payment" 
+            [class.active]="metodoPagoSeleccionado === 'PAYPAL'"
+            (click)="metodoPagoSeleccionado = 'PAYPAL'"
+          >
+            🅿️ PAYPAL
+          </button>
+        </div>
+
+        <div class="payment-details-box">
+          <!-- OPCIÓN 1: TARJETA DE CRÉDITO -->
+          <div *ngIf="metodoPagoSeleccionado === 'TARJETA'">
+            <div class="form-group">
+              <label>> NÚMERO DE TARJETA (16 DÍGITOS):</label>
+              <input type="text" class="input-terminal" [(ngModel)]="numeroTarjeta" placeholder="4532123456788892" maxLength="16" />
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>> TITULAR:</label>
+                <input type="text" class="input-terminal" [(ngModel)]="titularTarjeta" placeholder="NOMBRE COMPLETO" />
+              </div>
+              <div class="form-group w-30">
+                <label>> MM/AA:</label>
+                <input type="text" class="input-terminal" [(ngModel)]="expiracion" placeholder="12/28" maxLength="5" />
+              </div>
+              <div class="form-group w-20">
+                <label>> CVV:</label>
+                <input type="password" class="input-terminal" [(ngModel)]="cvv" placeholder="123" maxLength="4" />
+              </div>
+            </div>
+          </div>
+
+          <!-- OPCIÓN 2: OXXO PAY -->
+          <div *ngIf="metodoPagoSeleccionado === 'OXXO'">
+            <p>> <strong>NÚMERO DE REFERENCIA OXXO PAY:</strong></p>
+            <div class="barcode-simulated">{{ referenciaOxxo }}</div>
+            <p class="oxxo-instructions">Referencia de demostración sin validez en tienda.</p>
+          </div>
+
+          <!-- OPCIÓN 3: PAYPAL -->
+          <div *ngIf="metodoPagoSeleccionado === 'PAYPAL'">
+            <div class="form-group">
+              <label>> CORREO ELECTRÓNICO REGISTRADO EN PAYPAL:</label>
+              <input type="email" class="input-terminal" [(ngModel)]="correoPaypal" placeholder="usuario@dominio.com" />
+            </div>
+            <p class="paypal-info">> Simulación de un pago por ${{ juegoSeleccionado.precio }} MXN.</p>
+          </div>
+        </div>
+
+        <div *ngIf="errorPago" class="alert-error">> {{ errorPago }}</div>
+      </div>
+
+      <div class="modal-body" *ngIf="compraExitosa">
+        <h4 class="alert-success">> ¡COMPRA SIMULADA Y CLAVE DE PRUEBA GENERADA!</h4>
+        <p><strong>Folio:</strong> {{ compraExitosa.idCompra }}</p>
+        <p><strong>Método de Pago:</strong> {{ compraExitosa.metodoPago }}</p>
+        <p><strong>Clave Licencia:</strong> <span class="code-key">{{ compraExitosa.claveLicencia }}</span></p>
+      </div>
+
+      <div class="modal-footer">
+        @if (compraExitosa) {
+          <button type="button" class="btn-terminal" (click)="irAMisPedidos()">[ Ver mis pedidos ]</button>
+        }
+        <button *ngIf="!compraExitosa" class="btn-terminal btn-accent" (click)="procesarCompra()">[ VALIDAR_Y_PAGAR ]</button>
+        <button class="btn-terminal" (click)="cerrarMenuCompra()">[ CERRAR ]</button>
+      </div>
+    </div>
+  </div>
+</div>
