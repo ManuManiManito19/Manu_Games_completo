@@ -1,4 +1,4 @@
 Portadas ilustrativas y fondo de Manu Games
 Ilustraciones raster originales para el catálogo y su documentación académica.
-Los títulos semilla representan productos ficticios y sus códigos son simulados.
-Material incluido en el alcance académico indicado en LICENSE.
+Los nombres comerciales identifican referencias de demostración. Los códigos, precios y existencias son simulados.
+El material propio se incluye en el alcance académico indicado en LICENSE.
