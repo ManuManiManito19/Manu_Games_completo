@@ -1,0 +1,89 @@
+<nav class="admin-nav" aria-label="Administración">@for(t of tabs;track t[0]){<button type="button" [disabled]="busy" [attr.aria-pressed]="tab===t[0]" (click)="select(t[0])">{{t[1]}}</button>}</nav>
+@if(error){<p class="error" role="alert">{{error}}</p>} @if(busy||notice){<p role="status">{{busy?'Procesando solicitud…':notice}}</p>}
+@switch(tab){
+  @case('resumen'){
+    @if(report;as r){<section class="panel"><h2>Indicadores de operación</h2>
+      <dl><dt>Ventas netas aprobadas</dt><dd>{{format(r.sales.total)}}</dd><dt>Pedidos con pago vigente</dt><dd>{{r.sales.orders}}</dd></dl>
+      <h3>Pedidos por estado</h3><ul>@for(o of r.orders;track o.status){<li>{{estado(o.status)}} · {{o.quantity}}</li>} @empty {<li>Sin pedidos registrados.</li>}</ul>
+      <h3>Stock bajo</h3><ul>@for(s of r.lowStock;track s.sku){<li>{{s.sku}} · {{s.name}} · {{s.stock}}</li>} @empty {<li>Sin alertas de inventario.</li>}</ul>
+      <h3>Productos más vendidos</h3><ul>@for(p of r.top;track p.sku){<li>{{p.name}} · {{p.quantity}}</li>} @empty {<li>Sin ventas aprobadas.</li>}</ul>
+      <h3>Solicitudes</h3><ul>@for(c of r.cases;track $index){<li>{{estado(c.kind)}} · {{estado(c.status)}} · {{c.quantity}}</li>} @empty {<li>Sin solicitudes.</li>}</ul>
+    </section>}
+  }
+  @case('productos'){
+    <section class="panel"><h2>{{editing?'Editar producto':'Alta de producto'}}</h2>
+      <form class="grid-form" (submit)="saveProduct($event)">
+        <label>SKU<input name="sku" [value]="editing?.sku??''" required maxlength="24"></label><label>Nombre<input name="name" [value]="editing?.name??''" required maxlength="100"></label>
+        <label>Familia de variantes<input name="family" [value]="editing?.family??''" maxlength="100"></label>
+        <label>Categoría<select name="category_id" required>@for(c of categories;track c.id){@if(c.active){<option [value]="c.id" [selected]="editing?.category_id===c.id">{{c.name}}</option>}}</select></label>
+        <label>Descripción<input name="description" [value]="editing?.description??''" required minlength="8" maxlength="550"></label>
+        <label>Plataforma<input name="platform" [value]="editing?.platform??''" required maxlength="45"></label>
+        <label>Portada<select name="image">@for(c of covers;track c){<option [value]="'/covers/'+c+'.jpg'" [selected]="editing?.image===('/covers/'+c+'.jpg')">Portada {{c}}</option>}</select></label>
+        <label>Precio en MXN<input type="number" name="price" [value]="editing?editing.price/100:''" required min="0.01" step="0.01" max="100000"></label>
+        <label class="check"><input type="checkbox" name="active" [checked]="!editing||!!editing.active"> Activo</label>
+        <button [disabled]="busy" class="primary">Guardar producto</button>@if(editing){<button type="button" (click)="editing=undefined">Nueva alta</button>}
+      </form>
+      @for(p of products;track p.id){<article class="item"><span>{{p.sku}} · {{p.name}} · {{format(p.price)}} · {{p.active?'Activo':'Inactivo'}}</span>
+        <button type="button" [disabled]="busy" (click)="editing=p">Editar {{p.sku}}</button>@if(p.active){<button type="button" [disabled]="busy" (click)="disable('products',p.id)">Desactivar {{p.sku}}</button>}</article>}
+    </section>
+  }
+  @case('categorias'){
+    <section class="panel"><h2>Categorías</h2><form class="inline" (submit)="saveCategory($event)">
+      <label>Nombre de categoría<input name="name" required minlength="2" maxlength="60" [value]="editingCategory?.name??''"></label>
+      <label class="check"><input name="active" type="checkbox" [checked]="!editingCategory||!!editingCategory.active"> Activa</label>
+      <button [disabled]="busy">Guardar categoría</button>@if(editingCategory){<button type="button" (click)="editingCategory=undefined">Nueva alta</button>}</form>
+      @for(c of categories;track c.id){<article class="item"><span>{{c.name}} · {{c.active?'Activa':'Inactiva'}}</span>
+        <button type="button" [disabled]="busy" (click)="editingCategory=c">Editar {{c.name}}</button>@if(c.active){<button type="button" [disabled]="busy" (click)="disable('categories',c.id)">Desactivar {{c.name}}</button>}</article>}
+    </section>
+  }
+  @case('inventario'){
+    <section class="panel"><h2>Inventario</h2><form class="grid-form" (submit)="adjust($event)">
+      <label>Producto<select name="product" required>@for(p of products;track p.id){<option [value]="p.id">{{p.sku}} · {{p.name}} · stock {{p.stock}}</option>}</select></label>
+      <label>Ajuste en unidades<input name="delta" type="number" min="-10000" max="10000" required></label>
+      <label>Motivo<input name="reason" minlength="4" maxlength="100" required></label><button [disabled]="busy">Registrar ajuste</button></form>
+      <h3>Historial de movimientos</h3><ul>@for(m of moves;track m.id){<li>{{m.created_at}} UTC · Producto {{m.product_id}} · {{m.delta}} · {{m.reason}} · Pedido {{m.order_id??'sin pedido'}} · Actor {{m.actor_id??'sistema'}}</li>}</ul>
+    </section>
+  }
+  @case('pedidos'){
+    <section class="panel"><h2>Pedidos</h2>
+      @for(o of orders;track o.id){<article class="item"><span>{{o.folio}} · {{estado(o.status)}} · {{format(o.total)}}</span><button type="button" [disabled]="busy" (click)="viewOrder(o.id)">Ver {{o.folio}}</button></article>}@empty{<p>No hay pedidos.</p>}
+      @if(order;as o){<section class="panel admin-detail"><h3>{{o.folio}} · {{estado(o.status)}}</h3><p>Pago {{estado(o.payment_status)}} · {{o.reference}} · {{format(o.total)}}</p>
+        <p>Contacto {{o.address.recipient}} · Entrega digital · {{o.address.city}}, {{o.address.region}}</p>
+        @if(o.tracking){<p>Guía {{o.tracking}}</p>}
+        <ul>@for(i of o.items;track i.product_id){<li>{{i.sku}} · {{i.name}} × {{i.quantity}}</li>}</ul>
+        @if(next(o.status);as nextStatus){<button type="button" class="primary" [disabled]="busy" (click)="advance(o.id,nextStatus)">Marcar {{estado(nextStatus)}}</button>}
+      </section>}
+    </section>
+  }
+  @case('clientes'){
+    <section class="panel"><h2>Clientes</h2><ul>@for(c of customers;track c.id){<li>#{{c.id}} · {{c.name}} · {{c.email}}</li>}@empty{<li>Sin clientes.</li>}</ul></section>
+  }
+  @case('cupones'){
+    <section class="panel"><h2>Promociones y cupones</h2><form class="grid-form" (submit)="saveCoupon($event)">
+      <label>Código<input name="code" required maxlength="24" [value]="editingCoupon?.code??''"></label>
+      <label>Descuento porcentual<input name="percent" type="number" required min="1" max="80" [value]="editingCoupon?.percent??''"></label>
+      <label>Vence el día UTC<input name="ends_at" type="date" required [value]="editingCoupon?.ends_at?.slice(0,10)??''"></label>
+      <label>Límite de usos<input name="max_uses" type="number" required min="1" [value]="editingCoupon?.max_uses??''"></label>
+      <label class="check"><input name="active" type="checkbox" [checked]="!editingCoupon||!!editingCoupon.active"> Activo</label><button [disabled]="busy">Guardar cupón</button></form>
+      @for(c of coupons;track c.code){<article class="item"><span>{{c.code}} · {{c.percent}}% · {{c.ends_at}} · {{c.active?'Activo':'Inactivo'}}</span><button type="button" (click)="editingCoupon=c">Editar {{c.code}}</button></article>}
+    </section>
+  }
+  @case('casos'){
+    <section class="panel"><h2>Atención, devoluciones y garantías</h2>
+      @for(c of cases;track c.id){<article class="ticket"><h3>{{c.folio}} · {{estado(c.kind)}} · {{estado(c.status)}}</h3>
+        <p>Pedido {{c.order_id??'sin pedido'}} · {{c.reason}}</p>@if(c.evidence){<p>Evidencia declarada: {{c.evidence}}</p>}@if(c.resolution){<p>Resolución: {{c.resolution}}</p>}
+        @for(m of c.messages;track $index){<p>{{m.body}} · {{m.created_at}} UTC</p>}
+        @if(c.status==='open'||c.status==='needs_info'){
+          <form (submit)="resolve($event,c.id)" class="grid-form">
+            <label>Resultado<select name="status"><option value="needs_info">Solicitar información</option><option value="approved">Aprobar</option><option value="denied">No aprobar</option></select></label>
+            <label>Acción<select name="action"><option value="none">Registrar respuesta</option>@if(c.order_id){<option value="refund">Cerrar y reembolsar pedido completo</option><option value="replacement">Reponer guía o código</option>}</select></label>
+            <label>Fundamento o solicitud<input name="resolution" minlength="5" maxlength="700" required></label><button [disabled]="busy">Registrar resolución</button>
+          </form>
+        }
+      </article>}@empty{<p>Sin solicitudes.</p>}
+    </section>
+  }
+  @case('bitacora'){
+    <section class="panel"><h2>Bitácora de auditoría</h2><ul>@for(a of logs;track a.id){<li>{{a.created_at}} UTC · actor {{a.actor_id??'sistema'}} · {{a.action}} · {{a.entity}} {{a.entity_id}} · {{a.detail}}</li>}</ul></section>
+  }
+}

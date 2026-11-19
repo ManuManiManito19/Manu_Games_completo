@@ -1,0 +1,8 @@
+Manu Games · Entrega académica
+
+El código y los materiales originales de la entrega se distribuyen dentro del
+repositorio privado para instalación, ejecución y evaluación académica. Para
+otros usos o redistribución se requiere autorización de sus titulares.
+
+Las dependencias mantienen sus propias licencias. Consulta el campo license de
+package-lock.json y las licencias incluidas en las dependencias instaladas.

@@ -1,0 +1,11 @@
+ID,Prioridad,Bloque,Responsable,Criterio de aceptación,Hito,Estado
+MG-01,P0,Identidad y propuesta de negocio,Negocio y UX,Catálogo académico de 15 SKU como mínimo y tres categorías con análisis de mercado,Semana 1,Implementado
+MG-02,P0,Sesión y autorización,Ingeniería,Cliente autenticado y accesos administrativos denegados cuando no hay permiso,Semana 1,Verificado
+MG-03,P0,Persistencia y catálogo,Ingeniería,Inventario persistente y búsqueda con categoría filtro y detalle,Semana 1,Verificado
+MG-04,P0,Carrito y compra,Ingeniería y QA,Checkout con importes en servidor aceptación versionada y folio de prueba,Semana 2,Verificado
+MG-05,P0,Inventario y pagos,Ingeniería y QA,Confirmación sin sobreventa y reintento sin doble cargo simulado,Semana 2,Verificado
+MG-06,P0,Administración y atención,Operación,Pedidos con cambios trazables y solicitudes resueltas desde el panel,Semana 3,Verificado
+MG-07,P0,Políticas y privacidad,Negocio y UX,Información pública y disponible durante el registro y la compra,Semana 3,Verificado en demostración
+MG-08,P1,Manuales y respaldo,QA y documentación,Guía de instalación manuales completos y restauración con integridad,Semana 4,Verificado
+MG-09,P0,Usabilidad y defensa,Equipo de proyecto,Cinco tareas observadas con participantes y presentación al docente,Antes de la evaluación,Pendiente
+MG-10,P2,Operación comercial,Coordinación,Validar despliegue HTTPS proveedor de pago y obligaciones comerciales,Posterior,Fuera del alcance de demostración

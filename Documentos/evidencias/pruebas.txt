@@ -1,0 +1,20 @@
+▶ Tienda de extremo a extremo con persistencia y autorización
+  ✔ E01 catálogo paginado, filtros y ficha con variantes (48.176322ms)
+  ✔ E02 carrito persistente, modificación, eliminación y stock insuficiente (14.336484ms)
+  ✔ E03 registro con hash, rotación, entrada especial y control por rol/CSRF (2312.75507ms)
+  ✔ E04 precio en servidor, cupón, términos, folio e idempotencia (16.890064ms)
+  ✔ E05 gestión administrativa, transiciones, guía y entrega (12.216507ms)
+  ✔ E06 devolución, información adicional y reembolso sin doble reposición (10.749962ms)
+  ✔ E07 dos compradores disputan la última unidad y la transacción rechaza al segundo (18.615953ms)
+  ✔ E08 garantía con reposición, pago rechazado e inventario intacto (15.809149ms)
+  ✔ E09 políticas, recuperación genérica, cierre de sesión y caducidad (434.575709ms)
+  ✔ E10 integridad referencial y respaldo cifrado con restauración (5.176243ms)
+✔ Tienda de extremo a extremo con persistencia y autorización (2912.840973ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3030.075841

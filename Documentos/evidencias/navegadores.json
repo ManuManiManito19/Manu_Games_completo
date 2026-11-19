@@ -1,0 +1,48 @@
+{
+  "navegadores": {
+    "Chromium": {
+      "version": "153.0.8010.0",
+      "inicio": {
+        "domContentLoadedMs": 77,
+        "loadMs": 93,
+        "transfers": 395706
+      },
+      "anchosPx": [
+        360,
+        768,
+        1280
+      ]
+    },
+    "Firefox": {
+      "version": "153.0",
+      "anchosPx": [
+        360,
+        768,
+        1280
+      ]
+    }
+  },
+  "tareas": [
+    {
+      "tarea": "Buscar y consultar",
+      "resultado": "Enter sin iniciar sesión: inicial M, dos resultados por nombre y ficha con variante"
+    },
+    {
+      "tarea": "Operar carrito",
+      "resultado": "Ajuste de cantidad y subtotal confirmados"
+    },
+    {
+      "tarea": "Confirmar compra",
+      "resultado": "Aceptación, pago simulado, descuento y folio MG-CD144AB3FE10"
+    },
+    {
+      "tarea": "Operar pedido",
+      "resultado": "Administración cambió la secuencia hasta Entregado en Firefox"
+    },
+    {
+      "tarea": "Solicitar devolución",
+      "resultado": "Folio AT-F8F9C3D65E09 visible para comprador y resolución aplicada"
+    }
+  ],
+  "autenticacion": "El cliente vuelve a Inicio con su cuenta activa"
+}
