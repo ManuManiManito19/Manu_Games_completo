@@ -1,0 +1,21 @@
+    // BEGIN MANU GAMES
+    match /manuGamesCatalog/{sku} {
+      allow get, list: if true;
+    }
+
+    match /manuGamesProfiles/{uid} {
+      function ownsProfile() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+      allow get: if ownsProfile();
+      allow create, update: if ownsProfile()
+        && request.resource.data.keys().hasOnly(['name', 'avatar'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 90
+        && request.resource.data.avatar is string
+        && (request.resource.data.avatar in ['memo', 'cyber', 'gamer', 'neon', 'hacker']
+          || (request.resource.data.avatar.size() <= 16000
+            && request.resource.data.avatar.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$')));
+    }
+    // END MANU GAMES

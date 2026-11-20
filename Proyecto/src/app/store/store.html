@@ -14,7 +14,7 @@
         {{user ? 'Mi cuenta' : 'Iniciar sesión'}}
       </a>
       @if (user?.role==='admin') { <a href="#admin" [attr.aria-current]="view==='admin'?'page':null">Administración</a> }
-      <a class="nav-cart" href="#carrito" [attr.aria-label]="'Carrito, '+cartCount+' productos'">Carrito <span>{{cartCount}}</span></a>
+      @if(!preview){<a class="nav-cart" href="#carrito" [attr.aria-label]="'Carrito, '+cartCount+' productos'">Carrito <span>{{cartCount}}</span></a>}
     </nav>
   </div>
 </header>
@@ -65,7 +65,7 @@
               <div class="meta">{{p.category}} · {{p.platform}}</div>
               <h3><a [attr.href]="'#producto/'+p.id">{{p.name}}</a></h3>
               <p class="muted">{{p.stock>0?'Disponible · '+p.stock+' unidades':'Agotado'}}</p>
-              <div class="price-row"><strong>{{format(p.price)}}</strong><button type="button" [aria-label]="'Agregar '+p.name" [disabled]="busy||!p.stock" (click)="add(p)">Agregar</button></div>
+              <div class="price-row"><strong>{{format(p.price)}}</strong>@if(!preview){<button type="button" [aria-label]="'Agregar '+p.name" [disabled]="busy||!p.stock" (click)="add(p)">Agregar</button>}</div>
             </div>
           </article>
         } @empty { @if(!busy){<p class="panel">No hay productos con estos filtros.</p>} }
@@ -85,7 +85,8 @@
         <p>{{p.description}}</p>
         <dl><dt>SKU</dt><dd>{{p.sku}}</dd><dt>Disponibilidad</dt><dd>{{p.stock}} unidades</dd><dt>Entrega</dt><dd>Digital sin costo · liberación manual en la demostración</dd><dt>Compatibilidad</dt><dd>{{p.platform}} · licencia de simulación</dd></dl>
         @if(p.variants?.length){<p>Ediciones disponibles</p><ul>@for(variant of p.variants;track variant.id){<li><a [attr.href]="'#producto/'+variant.id">{{variant.name}} · {{variant.platform}}</a></li>}</ul>}
-        <p class="price">{{format(p.price)}}</p><button class="primary" [disabled]="busy||!p.stock" (click)="add(p)">Agregar al carrito</button>
+        <p class="price">{{format(p.price)}}</p>
+        @if(!preview){<button class="primary" [disabled]="busy||!p.stock" (click)="add(p)">Agregar al carrito</button>}
       </div>
     </section>
   }
@@ -155,11 +156,12 @@
         </form>
         <button type="button" class="logout" [disabled]="busy" (click)="logout()">Cerrar sesión</button>
         </section>
-        <section class="panel"><h2>Direcciones</h2>
+        @if(!preview){<section class="panel"><h2>Direcciones</h2>
           @for(a of addresses;track a.id){<div class="item"><span>{{a.recipient}} · {{a.street}}, {{a.city}}, {{a.region}} {{a.postal_code}}</span><button type="button" [disabled]="busy" (click)="removeAddress(a.id)">Eliminar dirección</button></div>}
           <details><summary>Registrar dirección</summary><ng-container [ngTemplateOutlet]="addressForm"></ng-container></details>
-        </section>
+        </section>}
       </div>
+      @if(!preview){
       <section class="panel"><h2>Mis pedidos</h2>
         @for(o of orders;track o.id){<p class="item"><a [attr.href]="'#pedido/'+o.id">{{o.folio}}</a> <span>{{estado(o.status)}} · {{format(o.total)}} · {{o.created_at}} UTC</span></p>} @empty {<p>Aún no tienes pedidos.</p>}
       </section>
@@ -187,6 +189,7 @@
           <button [disabled]="busy">Abrir solicitud de atención</button>
         </form>
       </section>
+      }
     }
   }
 
@@ -220,7 +223,15 @@
   }
 
   @if(view==='ayuda'){
-    <div class="section-head"><h1 id="page-title" tabindex="-1">Ayuda y políticas</h1><a class="button primary" href="#cuenta">Abrir una solicitud</a></div>
+    <div class="section-head"><h1 id="page-title" tabindex="-1">Ayuda y políticas</h1>@if(!preview){<a class="button primary" href="#cuenta">Abrir una solicitud</a>}</div>
+    @if(preview){
+      <article class="panel policies">
+        <h2>Vista previa académica</h2>
+        <p>Puedes explorar el catálogo y crear una cuenta de prueba. Los importes del catálogo están en pesos mexicanos. Los pedidos y pagos de prueba se realizan en la versión con servidor.</p>
+        <h2>Privacidad del perfil</h2>
+        <p>Firebase Authentication gestiona el acceso con correo y contraseña. Tu nombre y foto se guardan en un perfil al que solo puedes acceder con tu cuenta. Usa un nombre de prueba. Puedes cambiar la foto desde Mi cuenta o elegir un avatar.</p>
+      </article>
+    } @else {
     <article class="panel policies">
       <h2>Contacto</h2><p>Manu Games Operadora Académica, identidad ficticia. RFC de demostración MGX261119DE0, sin registro fiscal. Domicilio ficticio Av. Ejemplo 100, Nuevo Laredo, Tamaulipas, México. Contacto ilustrativo soporte&#64;manugames.example. Usa el formulario de Mi cuenta para generar un folio de atención. Horario de simulación de lunes a viernes de 09:00 a 17:00, con objetivo de respuesta de un día hábil.</p>
       <h2>Términos de compra</h2><p>Versión {{termsVersion||'2026-11-19'}}. La tienda académica opera en pesos mexicanos. Consulta precio, existencia, compatibilidad, descuento y cargos antes de aceptar el resumen. Cualquier cambio en existencias o precio requiere revisar la compra. Los pedidos y referencias son de prueba. Las portadas y nombres comerciales identifican los productos de la demostración.</p>
@@ -230,6 +241,7 @@
       <h2>Pago simulado</h2><p>El simulador registra la aprobación o el rechazo de la compra de prueba. Puedes consultar el comprobante de demostración desde tu pedido. Usa únicamente datos ficticios.</p>
       <h2>Preguntas frecuentes</h2><p>¿Dónde está el folio? En Mi cuenta, sección Mis pedidos. ¿Cómo se consulta un reembolso? En Mis solicitudes. ¿Se genera un cobro? Las operaciones son simuladas. ¿Cómo aplico el descuento? Introduce DEMO10 en el resumen antes de confirmar.</p>
     </article>
+    }
   }
 
   @if(view==='admin'){
@@ -268,7 +280,7 @@
           <a href="#ayuda">Lee el aviso y los términos de prueba</a>
           <label class="check"><input name="accepted" type="checkbox" required> Acepto los términos y consulté el aviso de privacidad.</label>
         }
-        <button class="primary" [disabled]="busy">{{authMode==='register'?'Crear cuenta':authMode==='recovery'?'Solicitar recuperación de prueba':'Iniciar sesión'}}</button>
+        <button class="primary" [disabled]="busy">{{authMode==='register'?'Crear cuenta':authMode==='recovery'?'Solicitar recuperación':'Iniciar sesión'}}</button>
       </form>
     </div>
   </section>
@@ -286,6 +298,8 @@
       }
     </div>
   </fieldset>
+  <label>Subir foto de perfil<input name="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="avatar-format"></label>
+  <small id="avatar-format">Opcional. JPG, PNG o WebP de hasta 5 MB.</small>
 </ng-template>
 <ng-template #addressForm>
   <form class="stack" (submit)="address($event)">

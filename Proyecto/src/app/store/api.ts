@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { firebasePreview } from './preview-mode';
+import { SparkApi } from './spark-api';
 
-export interface User { id: number; name: string; email: string; role: 'client' | 'admin'; avatar: string; }
+export interface User { id: number | string; name: string; email: string; role: 'client' | 'admin'; avatar: string; }
 export interface Category { id: number; name: string; active: number; }
 export interface Product {
   id: number; sku: string; name: string; family: string; description: string; platform: string;
@@ -27,11 +29,14 @@ export interface SupportCase {
   evidence:string; resolution:string|null; messages:{body:string;created_at:string}[];
 }
 export interface Catalog {items:Product[]; total:number; page:number; pageSize:number;}
-interface Session {user:User|null; csrf:string; termsVersion:string;}
+export interface Session {user:User|null; csrf:string; termsVersion:string;}
 @Injectable({providedIn:'root'})
 export class StoreApi {
+  readonly preview = firebasePreview;
+  private readonly spark = firebasePreview ? new SparkApi() : null;
   session: Session | null = null;
   async call<T>(path: string, method = 'GET', body?: object): Promise<T> {
+    if (this.spark) return await this.spark.call(path, method, body) as T;
     const headers = new Headers({Accept:'application/json'});
     if (body) headers.set('Content-Type','application/json');
     if (method !== 'GET' && this.session) headers.set('X-CSRF-Token',this.session.csrf);

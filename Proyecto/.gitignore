@@ -55,6 +55,8 @@ node_modules-*/
 *.pfx
 *-firebase-adminsdk-*.json
 firebase-debug.log
+firebase.firestore.local.json
+firestore.merged.rules
 
 /Back_End/data/
 /Back_End/backups/

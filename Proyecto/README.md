@@ -47,6 +47,35 @@ firebase deploy --only hosting --config firebase.hosting.json --project TU_PROYE
 
 Verifica `/api/health` en el dominio de Hosting y completa una compra con una cuenta de prueba. Firebase Hosting reenvía la cookie de sesión `__session` cuando `FIREBASE_HOSTING_PROXY=1`.
 
+## Vista previa en Firebase Spark
+
+La vista previa conserva el diseño de terminal y ofrece el catálogo, las fichas
+de producto, el registro, el inicio de sesión y la foto de perfil. El catálogo
+usa la colección `manuGamesCatalog` de Cloud Firestore. Las cuentas usan
+Firebase Authentication y cada perfil se guarda en `manuGamesProfiles/{uid}`.
+La tienda con carrito, pedidos, pagos simulados y administración se ejecuta con
+`npm start` o se publica con Cloud Run.
+
+Activa el proveedor Correo electrónico/contraseña en Firebase Authentication
+y usa una app web asociada al sitio de Hosting. Desde la carpeta `Proyecto` en
+una terminal autenticada con acceso a Firebase y Google Cloud, prepara el catálogo
+y las reglas. Los SKU ya existentes en Firestore conservan sus datos.
+
+```bash
+node deploy/prepare-firestore.cjs catalog manugames-d4df7
+node deploy/prepare-firestore.cjs rules manugames-d4df7
+firebase deploy --only firestore:rules --config firebase.firestore.local.json --project manugames-d4df7
+npm run build -- --configuration production,spark
+firebase hosting:channel:deploy catalogo --expires 30d --config firebase.spark.json --project manugames-d4df7
+```
+
+Revisa `firestore.merged.rules` antes de publicarlo. Comprueba que las reglas
+existentes restrinjan las lecturas y escrituras del perfil al propietario. En
+Firestore puedes editar precios, existencias y descripciones por SKU. Los precios
+se guardan en centavos de MXN y las imágenes del catálogo se sirven desde Hosting.
+La compilación lee la configuración web del proyecto con
+`/__/firebase/init.json`.
+
 ## Verificación
 
 - `npm test` prueba la compra, inventario, roles, atención y restauración.

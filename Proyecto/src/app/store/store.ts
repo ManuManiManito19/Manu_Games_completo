@@ -2,12 +2,14 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
 import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, PurchasedProduct, Quote, SupportCase, User, labels, mx, values } from './api';
 import { Manager } from './manager';
+import { encodeAvatar, isUploadedAvatar } from './avatar';
 
 @Component({
   selector:'app-store', imports:[Manager,NgTemplateOutlet], templateUrl:'./store.html', styleUrl:'./store.css'
 })
 export class Store implements OnInit {
   private readonly api=inject(StoreApi);
+  readonly preview = this.api.preview;
   private readonly cd=inject(ChangeDetectorRef);
   view='inicio'; id=0; busy=false; error=''; notice=''; authMode='login';
   user:User|null=null;
@@ -41,6 +43,7 @@ export class Store implements OnInit {
   get showNext(){return this.catalog.page*this.catalog.pageSize<this.catalog.total;}
   format(value:number){return mx.format(value/100);}
   avatarImage(id?:string){
+    if (id && isUploadedAvatar(id)) return id;
     const avatar=this.avatars.find(option=>option.id===id) ?? this.avatars[0];
     return '/avatars/'+avatar.id+'.png';
   }
@@ -83,7 +86,9 @@ export class Store implements OnInit {
   private async loadView(focus=false){
     const [view,id]=location.hash.replace(/^#\/?/,'').split('/');
     this.notice='';
-    this.view=['catalogo','producto','carrito','checkout','cuenta','pedido','ayuda','admin'].includes(view)?view:'inicio';
+    const views = this.preview ? ['catalogo','producto','cuenta','ayuda'] :
+      ['catalogo','producto','carrito','checkout','cuenta','pedido','ayuda','admin'];
+    this.view=views.includes(view)?view:'inicio';
     this.id=Number(id||0);
     if(this.view==='inicio'||this.view==='catalogo') await this.loadPage(1);
     if(this.view==='producto') this.product=await this.api.call<Product>('/products/'+this.id);
@@ -95,7 +100,7 @@ export class Store implements OnInit {
       this.quote=undefined;
       if(this.cartCount) await this.refreshQuote();
     }
-    if(this.view==='cuenta'&&this.user) await this.accountData();
+    if(this.view==='cuenta'&&this.user&&!this.preview) await this.accountData();
     if(this.view==='pedido'&&this.user) this.order=await this.api.call<Order>('/orders/'+this.id);
     if(this.view==='admin'&&this.user?.role==='admin') this.categories=await this.api.call<Category[]>('/categories');
     if(focus)setTimeout(()=>document.getElementById('page-title')?.focus({preventScroll:true}),0);
@@ -148,6 +153,7 @@ export class Store implements OnInit {
         throw new Error('Las contraseñas no coinciden.');
       }
       delete data['confirmPassword'];
+      if (this.authMode === 'register') await this.readAvatar(event, data);
       const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:data['accepted']==='on'});
       this.user=s.user;
       this.termsVersion=s.termsVersion;
@@ -172,7 +178,20 @@ export class Store implements OnInit {
   }
   profile(event:Event){
     const data=values(event);
-    return this.run(async()=>{this.user=await this.api.call<User>('/profile','PATCH',data);this.notice='Perfil guardado.';});
+    const form = event.target as HTMLFormElement;
+    return this.run(async()=>{
+      await this.readAvatar(event, data);
+      this.user=await this.api.call<User>('/profile','PATCH',data);
+      const fileInput = form.querySelector<HTMLInputElement>('input[name="avatarFile"]');
+      if (fileInput) fileInput.value = '';
+      this.notice='Perfil guardado.';
+    });
+  }
+  private async readAvatar(event: Event, data: Record<string, string>) {
+    delete data['avatarFile'];
+    const file = (event.target as HTMLFormElement)
+      .querySelector<HTMLInputElement>('input[name="avatarFile"]')?.files?.[0];
+    if (file) data['avatar'] = await encodeAvatar(file);
   }
   address(event:Event){
     const data=values(event);

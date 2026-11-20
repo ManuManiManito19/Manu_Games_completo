@@ -49,7 +49,13 @@ function searchKey(value) {
   return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 function avatarId(value = 'memo') {
-  requireValue(avatarIds.includes(value), 'Selecciona un avatar del catálogo.');
+  if (avatarIds.includes(value)) return value;
+  const encoded = typeof value === 'string' && value.length <= 16000 &&
+    /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(value)?.[1];
+  const image = encoded && Buffer.from(encoded, 'base64');
+  requireValue(image && image.length > 4 && image.toString('base64') === encoded &&
+    image[0] === 0xff && image[1] === 0xd8 && image.at(-2) === 0xff && image.at(-1) === 0xd9,
+  'Selecciona un avatar o una imagen válida.');
   return value;
 }
 function openDatabase(location = process.env.DB_PATH || join(__dirname, '../data/store.sqlite')) {

@@ -54,6 +54,14 @@
               ],
               "outputHashing": "all"
             },
+            "spark": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/store/preview-mode.ts",
+                  "with": "src/app/store/preview-mode.spark.ts"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
