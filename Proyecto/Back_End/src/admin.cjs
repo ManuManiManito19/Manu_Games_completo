@@ -1,5 +1,5 @@
 const { audit, field, integer, requireValue, transaction } = require('./foundation.cjs');
-const { listProducts, adjust } = require('./commerce.cjs');
+const { listProducts, adjust, originalCovers } = require('./commerce.cjs');
 
 function saveProduct(db,user,id,input){
   const code=field(input.sku,'SKU',2,24).toUpperCase();
@@ -10,7 +10,7 @@ function saveProduct(db,user,id,input){
   const description=field(input.description,'descripción',8,550);
   const platform=field(input.platform,'plataforma',2,45);
   const image=field(input.image,'imagen');
-  requireValue(/^\/covers\/(?:[1-9]|1[0-6])\.jpg$/.test(image),'Selecciona una portada del catálogo.');
+  requireValue(/^\/covers\/(?:[1-9]|1[0-6])\.jpg$/.test(image) || originalCovers.has(image),'Selecciona una portada del catálogo.');
   const price=integer(input.price,'precio en centavos',1,10000000);
   return transaction(db,()=>{
     requireValue(db.prepare('SELECT id FROM categories WHERE id=? AND active=1').get(category),'Categoría inactiva o inexistente.');

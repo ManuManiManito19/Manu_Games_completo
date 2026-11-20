@@ -5,18 +5,45 @@ const cartItems = `SELECT p.*,c.active category_active,i.quantity FROM carts i J
 JOIN categories c ON c.id=p.category_id WHERE i.session_id=? ORDER BY p.id`;
 const inventoryChange = `UPDATE products SET stock=stock+? WHERE id=? AND stock+? BETWEEN 0 AND 1000000`;
 const move = `INSERT INTO inventory_movements(product_id,delta,reason,actor_id,order_id) VALUES(?,?,?,?,?)`;
+const originalCovers = new Set(catalog.flatMap(row=>typeof row[7]==='string' ? ['/games/'+row[7]] : []));
+const orders = new Map([
+  ['name', 'p.name,p.id'],
+  ['ascending', 'p.price,p.id'],
+  ['descending', 'p.price DESC,p.id'],
+  ['newest', 'p.id DESC'],
+  ['featured', "CASE WHEN p.image LIKE '/games/%' THEN 0 ELSE 1 END,p.id DESC"],
+]);
+
+function seedProducts(db, rows, startingAt=0){
+  const category=db.prepare('SELECT id FROM categories WHERE name=?');
+  const insert=db.prepare(`INSERT INTO products(sku,category_id,name,family,description,platform,image,price,stock)
+    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(sku) DO NOTHING`);
+  const movement=db.prepare(move);
+  rows.forEach(([nameOfCategory,name,family,description,platform,price,stock,cover], index)=>{
+    const number=startingAt+index+1;
+    const sku=`MG-${String(number).padStart(3,'0')}`;
+    const image=typeof cover==='string'?'/games/'+cover:`/covers/${cover ?? number}.jpg`;
+    const result=insert.run(sku,category.get(nameOfCategory).id,name,family,description,platform,image,price,stock);
+    if(result.changes&&stock>0)movement.run(result.lastInsertRowid,stock,'seed',null,null);
+  });
+}
 
 function seedCatalog(db) {
   transaction(db, () => {
-    if (db.prepare('SELECT id FROM categories LIMIT 1').get()) return;
-    for (const name of ['Juegos','Complementos','Suscripciones']) db.prepare('INSERT INTO categories(name) VALUES(?)').run(name);
-    catalog.forEach(([category,name,family,description,platform,price,stock,cover], i) => {
-      const id = db.prepare('SELECT id FROM categories WHERE name=?').get(category).id;
-      const product = db.prepare('INSERT INTO products(sku,category_id,name,family,description,platform,image,price,stock) VALUES(?,?,?,?,?,?,?,?,?)')
-        .run(`MG-${String(i+1).padStart(3,'0')}`,id,name,family,description,platform,`/covers/${cover ?? i+1}.jpg`,price,stock);
-      db.prepare(move).run(product.lastInsertRowid,stock,'seed',null,null);
-    });
-    db.prepare("INSERT INTO coupons(code,percent,ends_at,max_uses) VALUES('DEMO10',10,'2099-12-31T00:00:00Z',200)").run();
+    const empty=!db.prepare('SELECT id FROM categories LIMIT 1').get();
+    const insertCategory=db.prepare('INSERT OR IGNORE INTO categories(name) VALUES(?)');
+    if(empty){
+      for(const name of ['Juegos','DLCs','Complementos']) insertCategory.run(name);
+      seedProducts(db,catalog);
+      db.prepare("INSERT OR IGNORE INTO coupons(code,percent,ends_at,max_uses) VALUES('DEMO10',10,'2099-12-31T00:00:00Z',200)").run();
+    }
+    if(!db.prepare('SELECT version FROM schema_migrations WHERE version=3').get()){
+      if(!empty){
+        for(const name of ['Juegos','Complementos']) insertCategory.run(name);
+        seedProducts(db,catalog.slice(36),36);
+      }
+      db.prepare('INSERT INTO schema_migrations(version) VALUES(3)').run();
+    }
   });
 }
 
@@ -41,8 +68,7 @@ function catalogPage(db, query) {
     }
   }
   if (query.get('stock') === '1') predicates.push('p.stock>0');
-  const sort = { name:'p.name,p.id', ascending:'p.price,p.id', descending:'p.price DESC,p.id', newest:'p.id DESC' }[query.get('sort')] || 'p.id';
-  requireValue(['p.name,p.id','p.price,p.id','p.price DESC,p.id','p.id DESC','p.id'].includes(sort), 'Orden inválido.');
+  const sort = orders.get(query.get('sort')) || 'p.id';
   const page = integer(Number(query.get('page') || 1),'página',1,10000);
   const where = ' WHERE ' + predicates.join(' AND ');
   const total = db.prepare('SELECT count(*) total FROM products p JOIN categories c ON c.id=p.category_id'+where).get(...params).total;
@@ -93,6 +119,15 @@ function orderDetail(db, id, user) {
   const history=db.prepare("SELECT detail,created_at FROM audit_logs WHERE entity='order' AND entity_id=? ORDER BY id").all(String(id));
   return {...visible,address:JSON.parse(address_snapshot),items,history,
     delivery_code: order.status==='delivered' ? `DEMO-${order.tracking?.slice(4) || order.folio.slice(3)}` : null };
+}
+function library(db, userId){
+  return db.prepare(`SELECT o.id AS order_id,o.folio,o.status,i.sku,i.name,i.platform,i.quantity,s.tracking
+    FROM orders o JOIN payments p ON p.order_id=o.id JOIN order_items i ON i.order_id=o.id
+    JOIN shipments s ON s.order_id=o.id WHERE o.user_id=? AND p.status IN ('approved','refunded')
+    ORDER BY o.id DESC,i.sku`).all(userId).map(({tracking,...item})=>({
+      ...item,
+      license:item.status==='delivered'?`DEMO-${tracking?.slice(4)??item.folio.slice(3)}-${item.sku}`:null
+    }));
 }
 function adjust(db, product, delta, reason, actor, order=null) {
   requireValue(db.prepare(inventoryChange).run(delta,product,delta).changes===1,'Inventario insuficiente o ajuste fuera de rango.',409);
@@ -164,4 +199,4 @@ function transitionOrder(db, user, id, input) {
   });
 }
 
-module.exports={ seedCatalog,catalogPage,listProducts,cart,setCart,quote,orderDetail,createOrder,confirmPayment,transitionOrder,adjust };
+module.exports={ seedCatalog,catalogPage,listProducts,originalCovers,cart,setCart,quote,orderDetail,library,createOrder,confirmPayment,transitionOrder,adjust };

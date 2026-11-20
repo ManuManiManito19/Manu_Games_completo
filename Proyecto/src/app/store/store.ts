@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
-import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, Quote, SupportCase, User, labels, mx, values } from './api';
+import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, PurchasedProduct, Quote, SupportCase, User, labels, mx, values } from './api';
 import { Manager } from './manager';
 
 @Component({
@@ -18,6 +18,7 @@ export class Store implements OnInit {
   quote?:Quote;
   addresses:Address[]=[];
   orders:OrderSummary[]=[];
+  purchasedProducts:PurchasedProduct[]=[];
   cases:SupportCase[]=[];
   order?:Order;
   payment?:Order;
@@ -27,11 +28,25 @@ export class Store implements OnInit {
   requestKey='';
   termsVersion='';
   labels=labels;
+  readonly avatars=[
+    {id:'memo', name:'Memo'},
+    {id:'cyber', name:'Cyber'},
+    {id:'gamer', name:'Gamer'},
+    {id:'neon', name:'Neon'},
+    {id:'hacker', name:'Hacker'},
+  ];
   get cartCount(){return this.cart.items.reduce((n,item)=>n+item.quantity,0);}
   get filtered(){return Object.values(this.filters).some(Boolean);}
   get showPrevious(){return this.catalog.page>1;}
   get showNext(){return this.catalog.page*this.catalog.pageSize<this.catalog.total;}
   format(value:number){return mx.format(value/100);}
+  avatarImage(id?:string){
+    const avatar=this.avatars.find(option=>option.id===id) ?? this.avatars[0];
+    return '/avatars/'+avatar.id+'.png';
+  }
+  portraitCover(image:string){
+    return /\/(?:gamepass-|playstation-plus-|gow-ragnarok)/.test(image);
+  }
   estado(value:string){return this.labels[value]||value;}
   caseStatus(ticket:SupportCase){
     if(ticket.kind==='return'&&ticket.status==='open')return 'Devolución en proceso';
@@ -88,8 +103,12 @@ export class Store implements OnInit {
   }
   private async loadPage(page:number){
     const params=new URLSearchParams({ page:String(page) });
-    for(const [key,value] of Object.entries(this.filters)){
-      if(value!=='')params.set(key,['min','max'].includes(key)?String(Math.round(Number(value)*100)):value);
+    if(this.view==='inicio'){
+      params.set('sort','featured');
+    } else {
+      for(const [key,value] of Object.entries(this.filters)){
+        if(value!=='')params.set(key,['min','max'].includes(key)?String(Math.round(Number(value)*100)):value);
+      }
     }
     this.catalog=await this.api.call<Catalog>('/products?'+params);
   }
@@ -99,7 +118,11 @@ export class Store implements OnInit {
     if(this.view==='catalogo'){void this.run(()=>this.loadPage(1));return;}
     this.go('catalogo');
   }
-  filterCategory(id:number){this.filters={...this.filters,category:String(id)};this.view==='catalogo'?void this.run(()=>this.loadPage(1)):this.go('catalogo');}
+  filterCategory(id?:number){
+    this.filters={...this.filters,category:id===undefined?'':String(id)};
+    if(this.view==='catalogo')void this.run(()=>this.loadPage(1));
+    else this.go('catalogo');
+  }
   reset(){this.filters={q:'',category:'',min:'',max:'',sort:'',stock:''}; return this.run(()=>this.loadPage(1));}
   page(n:number){return this.run(()=>this.loadPage(n));}
   add(product:Product){
@@ -121,6 +144,10 @@ export class Store implements OnInit {
         this.notice=result.message;
         return;
       }
+      if(this.authMode==='register'&&data['password']!==data['confirmPassword']){
+        throw new Error('Las contraseñas no coinciden.');
+      }
+      delete data['confirmPassword'];
       const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:data['accepted']==='on'});
       this.user=s.user;
       this.termsVersion=s.termsVersion;
@@ -138,8 +165,9 @@ export class Store implements OnInit {
     this.go('inicio');
   });}
   private async accountData(){
-    [this.addresses,this.orders,this.cases]=await Promise.all([
-      this.api.call<Address[]>('/addresses'),this.api.call<OrderSummary[]>('/orders'),this.api.call<SupportCase[]>('/returns')
+    [this.addresses,this.orders,this.cases,this.purchasedProducts]=await Promise.all([
+      this.api.call<Address[]>('/addresses'),this.api.call<OrderSummary[]>('/orders'),this.api.call<SupportCase[]>('/returns'),
+      this.api.call<PurchasedProduct[]>('/library')
     ]);
   }
   profile(event:Event){

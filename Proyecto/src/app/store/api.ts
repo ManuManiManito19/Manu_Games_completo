@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-export interface User { id: number; name: string; email: string; role: 'client' | 'admin'; }
+export interface User { id: number; name: string; email: string; role: 'client' | 'admin'; avatar: string; }
 export interface Category { id: number; name: string; active: number; }
 export interface Product {
   id: number; sku: string; name: string; family: string; description: string; platform: string;
@@ -13,6 +13,9 @@ export interface Cart {
 export interface Quote extends Cart { discount: number; shipping: number; tax: number; total: number; delivery: string; }
 export interface Address {id: number; recipient: string; street: string; city: string; region: string; postal_code: string;}
 export interface OrderSummary {id:number; folio:string; status:string; total:number; created_at:string;}
+export interface PurchasedProduct {
+  order_id:number; folio:string; status:string; sku:string; name:string; platform:string; quantity:number; license:string|null;
+}
 export interface Order extends OrderSummary {
   user_id: number; subtotal:number; discount:number; shipping:number; tax:number; payment_status:string;
   reference:string; tracking:string|null; delivery_code:string|null; terms_version:string; consent_at:string;

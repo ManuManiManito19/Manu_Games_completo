@@ -18,7 +18,7 @@
         <label>Categoría<select name="category_id" required>@for(c of categories;track c.id){@if(c.active){<option [value]="c.id" [selected]="editing?.category_id===c.id">{{c.name}}</option>}}</select></label>
         <label>Descripción<input name="description" [value]="editing?.description??''" required minlength="8" maxlength="550"></label>
         <label>Plataforma<input name="platform" [value]="editing?.platform??''" required maxlength="45"></label>
-        <label>Portada<select name="image">@for(c of covers;track c){<option [value]="'/covers/'+c+'.jpg'" [selected]="editing?.image===('/covers/'+c+'.jpg')">Portada {{c}}</option>}</select></label>
+        <label>Portada<select name="image">@for(c of covers;track c.url){<option [value]="c.url" [selected]="editing?.image===c.url">{{c.name}}</option>}</select></label>
         <label>Precio en MXN<input type="number" name="price" [value]="editing?editing.price/100:''" required min="0.01" step="0.01" max="100000"></label>
         <label class="check"><input type="checkbox" name="active" [checked]="!editing||!!editing.active"> Activo</label>
         <button [disabled]="busy" class="primary">Guardar producto</button>@if(editing){<button type="button" (click)="editing=undefined">Nueva alta</button>}

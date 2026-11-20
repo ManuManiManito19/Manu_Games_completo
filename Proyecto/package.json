@@ -12,7 +12,8 @@
     "db:backup": "node --env-file-if-exists=Back_End/.env Back_End/src/operations.cjs backup",
     "db:restore": "node --env-file-if-exists=Back_End/.env Back_End/src/operations.cjs restore",
     "test:store": "node --test Back_End/test/*.test.cjs",
-    "dev": "ng serve --proxy-config proxy.conf.json"
+    "dev": "ng serve --proxy-config proxy.conf.json",
+    "db:catalog": "node --env-file-if-exists=Back_End/.env Back_End/src/operations.cjs catalog"
   },
   "private": true,
   "packageManager": "npm@11.9.0",
@@ -21,6 +22,7 @@
     "@angular/compiler": "^22.3.0",
     "@angular/core": "^22.3.0",
     "@angular/platform-browser": "^22.3.0",
+    "google-auth-library": "^11.3.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

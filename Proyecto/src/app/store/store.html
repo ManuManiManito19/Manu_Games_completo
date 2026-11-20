@@ -1,7 +1,7 @@
 <a class="skip" href="#content" (click)="$event.preventDefault(); main.focus()">Saltar al contenido</a>
 <header class="top">
   <div class="wrap navigation">
-    <a class="brand" href="#inicio" aria-label="Manu Games, inicio"><span class="mark" aria-hidden="true">M</span> MANU<span>GAMES</span></a>
+    <a class="brand" href="#inicio" aria-label="Manu Games, inicio"><span class="mark" aria-hidden="true">&gt;_</span> MANU<span>GAMES</span></a>
     <form class="site-search" role="search" (submit)="search($event)">
       <input type="search" name="q" aria-label="Buscar en la tienda" placeholder="Buscar videojuegos" maxlength="80">
       <button type="submit" [disabled]="busy">Buscar</button>
@@ -9,7 +9,10 @@
     <nav aria-label="Navegación principal">
       <a href="#catalogo" [attr.aria-current]="view==='catalogo'?'page':null">Catálogo</a>
       <a href="#ayuda" [attr.aria-current]="view==='ayuda'?'page':null">Ayuda</a>
-      <a href="#cuenta" [attr.aria-current]="view==='cuenta'?'page':null">{{user ? 'Mi cuenta' : 'Iniciar sesión'}}</a>
+      <a class="account-link" href="#cuenta" [attr.aria-current]="view==='cuenta'?'page':null">
+        @if(user){<img class="profile-avatar" [src]="avatarImage(user.avatar)" width="28" height="28" alt="">}
+        {{user ? 'Mi cuenta' : 'Iniciar sesión'}}
+      </a>
       @if (user?.role==='admin') { <a href="#admin" [attr.aria-current]="view==='admin'?'page':null">Administración</a> }
       <a class="nav-cart" href="#carrito" [attr.aria-label]="'Carrito, '+cartCount+' productos'">Carrito <span>{{cartCount}}</span></a>
     </nav>
@@ -20,25 +23,24 @@
   <div class="status" role="status">@if(busy){<p>Procesando solicitud…</p>} @else if(notice){<p>{{notice}}</p>}</div>
 
   @if(view==='inicio'){
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">VIDEOJUEGOS DIGITALES</p>
-        <h1 id="page-title" tabindex="-1">Tu próxima<br>partida empieza aquí.</h1>
-        <p>Explora aventuras, acción y estrategia. Prueba el proceso de compra y sigue tu pedido digital desde tu cuenta.</p>
-        <div class="actions"><a class="button primary" href="#catalogo">Explorar catálogo</a><a class="button" href="#ayuda">Cómo funciona</a></div>
-      </div>
-      <img src="/covers/hero.jpg" alt="" width="1600" height="690" fetchpriority="high">
-    </section>
-    <div class="strip">
-      @for(category of categories; track category.id){<button class="chip" type="button" (click)="filterCategory(category.id)">{{category.name}}</button>}
+    <div class="intro">
+      <h1 id="page-title" class="terminal-heading" tabindex="-1">Tienda de videojuegos</h1>
       <span>Cupón de prueba <strong>DEMO10</strong></span>
     </div>
   }
 
   @if(view==='inicio'||view==='catalogo'){
     <section class="catalog">
-      @if(view==='catalogo'){<h1 id="page-title" tabindex="-1">Catálogo</h1>}
-      @else {<div class="section-head"><h2>Selección destacada</h2><a href="#catalogo">Ver todo el catálogo</a></div>}
+      @if(view==='catalogo'){<h1 id="page-title" class="terminal-heading" tabindex="-1">Catálogo</h1>}
+      <div class="strip" role="group" aria-label="Filtrar por categoría">
+        @if(view==='catalogo'){
+          <button class="chip" type="button" [attr.aria-pressed]="!filters['category']" (click)="filterCategory()" [disabled]="busy">Todas</button>
+        }
+        @for(category of categories; track category.id){
+          <button class="chip" type="button" [attr.aria-pressed]="view==='catalogo' && filters['category']===category.id.toString()" (click)="filterCategory(category.id)" [disabled]="busy">{{category.name}}</button>
+        }
+      </div>
+      @if(view==='inicio'){<div class="section-head"><h2>Selección destacada</h2><a href="#catalogo" (click)="filterCategory()">Ver todo el catálogo</a></div>}
       @if(view==='catalogo'){
       <form class="panel filters" (submit)="search($event)">
         <label>Buscar por nombre o SKU<input name="q" [value]="filters['q']" type="search" maxlength="80" placeholder="Horizonte, MG-001"></label>
@@ -47,7 +49,7 @@
         </select></label>
         <label>Mínimo en MXN<input type="number" min="0" max="100000" step="0.01" name="min" [value]="filters['min']"></label>
         <label>Máximo en MXN<input type="number" min="0" max="100000" step="0.01" name="max" [value]="filters['max']"></label>
-        <label>Ordenar<select name="sort" [value]="filters['sort']"><option value="">Destacados</option><option value="name">Nombre</option>
+        <label>Ordenar<select name="sort" [value]="filters['sort']"><option value="">Predeterminado</option><option value="featured">Destacados</option><option value="name">Nombre</option>
           <option value="ascending">Precio menor</option><option value="descending">Precio mayor</option><option value="newest">Recientes</option></select></label>
         <label class="check"><input type="checkbox" name="stock" value="1" [checked]="filters['stock']==='1'"> Solo disponibles</label>
         <button class="primary" [disabled]="busy">Aplicar filtros</button>
@@ -58,7 +60,7 @@
       <div class="cards">
         @for(p of catalog.items;track p.id){
           <article class="product">
-            <a class="cover" [attr.href]="'#producto/'+p.id" [attr.aria-label]="'Ficha de '+p.name"><img [src]="p.image" alt="" width="680" height="425" loading="lazy"></a>
+            <a class="cover" [attr.href]="'#producto/'+p.id" [attr.aria-label]="'Ficha de '+p.name"><img [src]="p.image" [attr.data-portrait]="portraitCover(p.image)?'':null" alt="" width="680" height="425" loading="lazy"></a>
             <div class="product-body">
               <div class="meta">{{p.category}} · {{p.platform}}</div>
               <h3><a [attr.href]="'#producto/'+p.id">{{p.name}}</a></h3>
@@ -77,7 +79,7 @@
   @if(view==='producto' && product; as p){
     <a href="#catalogo">Volver al catálogo</a>
     <section class="split detail">
-      <img class="detail-cover" [src]="p.image" [alt]="'Portada original de '+p.name" width="680" height="425">
+      <img class="detail-cover" [src]="p.image" [attr.data-portrait]="portraitCover(p.image)?'':null" [alt]="'Portada de '+p.name" width="680" height="425">
       <div class="panel">
         <p class="eyebrow">{{p.category}} · {{p.platform}}</p><h1 id="page-title" tabindex="-1">{{p.name}}</h1>
         <p>{{p.description}}</p>
@@ -144,8 +146,13 @@
     @if(!user){<ng-container [ngTemplateOutlet]="auth"></ng-container>}
     @else{
       <div class="split">
-        <section class="panel"><h2>Perfil</h2><p>{{user.email}}</p>
-        <form (submit)="profile($event)" class="stack"><label>Nombre<input name="name" [value]="user.name" required maxlength="90"></label><button [disabled]="busy">Guardar perfil</button></form>
+        <section class="panel"><h2>Perfil</h2>
+        <div class="profile-summary"><img class="profile-avatar" [src]="avatarImage(user.avatar)" width="56" height="56" alt=""><p>{{user.email}}</p></div>
+        <form (submit)="profile($event)" class="stack">
+          <label>Nombre<input name="name" [value]="user.name" required maxlength="90"></label>
+          <ng-container [ngTemplateOutlet]="avatarOptions" [ngTemplateOutletContext]="{$implicit:user.avatar}"></ng-container>
+          <button [disabled]="busy">Guardar perfil</button>
+        </form>
         <button type="button" class="logout" [disabled]="busy" (click)="logout()">Cerrar sesión</button>
         </section>
         <section class="panel"><h2>Direcciones</h2>
@@ -155,6 +162,16 @@
       </div>
       <section class="panel"><h2>Mis pedidos</h2>
         @for(o of orders;track o.id){<p class="item"><a [attr.href]="'#pedido/'+o.id">{{o.folio}}</a> <span>{{estado(o.status)}} · {{format(o.total)}} · {{o.created_at}} UTC</span></p>} @empty {<p>Aún no tienes pedidos.</p>}
+      </section>
+      <section class="panel"><h2>Mis productos</h2>
+        @for(item of purchasedProducts;track item.order_id+'-'+item.sku){
+          <article class="item">
+            <div><strong>{{item.name}}</strong><p>{{item.platform}} · {{item.sku}} · {{item.quantity}} unidad(es)</p></div>
+            <div><p><a [attr.href]="'#pedido/'+item.order_id">{{item.folio}}</a> · {{estado(item.status)}}</p>
+            @if(item.license){<p>Licencia de prueba <code>{{item.license}}</code></p>}
+            @else if(item.status!=='refunded'){<p>Licencia pendiente de entrega</p>}</div>
+          </article>
+        } @empty {<p>Aún no tienes productos comprados.</p>}
       </section>
       <section class="panel"><h2>Mis solicitudes</h2>
         @for(c of cases;track c.id){
@@ -206,11 +223,11 @@
     <div class="section-head"><h1 id="page-title" tabindex="-1">Ayuda y políticas</h1><a class="button primary" href="#cuenta">Abrir una solicitud</a></div>
     <article class="panel policies">
       <h2>Contacto</h2><p>Manu Games Operadora Académica, identidad ficticia. RFC de demostración MGX261119DE0, sin registro fiscal. Domicilio ficticio Av. Ejemplo 100, Nuevo Laredo, Tamaulipas, México. Contacto ilustrativo soporte&#64;manugames.example. Usa el formulario de Mi cuenta para generar un folio de atención. Horario de simulación de lunes a viernes de 09:00 a 17:00, con objetivo de respuesta de un día hábil.</p>
-      <h2>Términos de compra</h2><p>Versión {{termsVersion||'2026-11-19'}}. La tienda académica opera en pesos mexicanos. Consulta precio, existencia, compatibilidad, descuento y cargos antes de aceptar el resumen. Cualquier cambio en existencias o precio requiere revisar la compra. Los pedidos y referencias son de prueba. Las ilustraciones son propias y los nombres comerciales identifican las referencias del ejercicio.</p>
+      <h2>Términos de compra</h2><p>Versión {{termsVersion||'2026-11-19'}}. La tienda académica opera en pesos mexicanos. Consulta precio, existencia, compatibilidad, descuento y cargos antes de aceptar el resumen. Cualquier cambio en existencias o precio requiere revisar la compra. Los pedidos y referencias son de prueba. Las portadas y nombres comerciales identifican los productos de la demostración.</p>
       <h2>Aviso de privacidad</h2><p>El operador académico usa nombre, correo, dirección ficticia, pedidos y solicitudes para acceso, operación, atención y seguridad. El ejercicio prescinde de marketing. Usa la opción Privacidad y derechos ARCO en Mi cuenta para pedir acceso, rectificación, cancelación, oposición o limitar tratamiento. Identifica el folio y el dato sin enviar contraseñas. La copia de demostración conserva registros hasta el cierre de la evaluación y un máximo operativo de 30 días según el plan académico. Los cambios al aviso se publican aquí con versión. Usa datos ficticios.</p>
       <h2>Entrega digital</h2><p>Cobertura simulada en México. Envío digital de costo cero, sin paquetería. La administración prepara y libera la guía en el historial. Durante la demostración el objetivo es resolver en la misma sesión. Si el código de prueba no aparece, abre un folio de soporte.</p>
       <h2>Cancelaciones, devoluciones y garantías</h2><p>Solicita una cancelación, devolución o garantía desde el detalle del pedido. Indica la partida, el motivo y evidencia opcional. La administración registra evaluación, resultado y aclaraciones en Mi cuenta. Se puede cancelar un pedido pendiente o revisar un pago aprobado según el estado y la incidencia. La simulación permite reembolso del pedido completo y reposición digital. El objetivo operativo de respuesta es un día hábil. La política académica no limita derechos legales aplicables.</p>
-      <h2>Pagos y facturación</h2><p>El simulador puede aprobar o rechazar el pago. Nunca ingresarás datos de una tarjeta. El comprobante interno carece de validez fiscal. El ejercicio no timbra CFDI. En operación real, la facturación requeriría revisar el régimen, habilitar el servicio y recabar solo los datos fiscales aplicables.</p>
+      <h2>Pago simulado</h2><p>El simulador registra la aprobación o el rechazo de la compra de prueba. Puedes consultar el comprobante de demostración desde tu pedido. Usa únicamente datos ficticios.</p>
       <h2>Preguntas frecuentes</h2><p>¿Dónde está el folio? En Mi cuenta, sección Mis pedidos. ¿Cómo se consulta un reembolso? En Mis solicitudes. ¿Se genera un cobro? Las operaciones son simuladas. ¿Cómo aplico el descuento? Introduce DEMO10 en el resumen antes de confirmar.</p>
     </article>
   }
@@ -223,18 +240,52 @@
 </main>
 <footer><div class="wrap footer"><a class="brand" href="#inicio"><span class="mark" aria-hidden="true">M</span> MANU<span>GAMES</span></a><p>Proyecto académico · pagos y licencias de prueba</p><a href="#ayuda">Contacto y políticas</a></div></footer>
 <ng-template #auth>
-  <section class="panel auth">
-    <div class="actions"><button type="button" [attr.aria-pressed]="authMode==='login'" (click)="authMode='login'">Ingresar</button>
-    <button type="button" [attr.aria-pressed]="authMode==='register'" (click)="authMode='register'">Registrarme</button>
-    <button type="button" [attr.aria-pressed]="authMode==='recovery'" (click)="authMode='recovery'">Recuperar acceso</button></div>
-    <form class="stack" (submit)="authenticate($event)">
-      @if(authMode==='register'){<label>Nombre<input name="name" autocomplete="name" required minlength="2" maxlength="90"></label>}
-      <label>Correo electrónico<input name="email" type="email" autocomplete="email" required maxlength="180"></label>
-      @if(authMode!=='recovery'){<label>Contraseña<input name="password" type="password" [attr.autocomplete]="authMode==='register'?'new-password':'current-password'" [attr.minlength]="authMode==='register'?12:1" maxlength="128" required></label>}
-      @if(authMode==='register'){<p>Usa una contraseña de al menos 12 caracteres y datos ficticios.</p><p><a href="#ayuda">Lee el aviso y los términos de prueba</a>.</p><label class="check"><input name="accepted" type="checkbox" required> Acepto los términos y consulté el aviso de privacidad.</label>}
-      <button class="primary" [disabled]="busy">{{authMode==='register'?'Crear cuenta':authMode==='recovery'?'Solicitar recuperación de prueba':'Iniciar sesión'}}</button>
-    </form>
+  <section class="auth" aria-labelledby="access-title">
+    <div class="terminal-bar">
+      <span class="terminal-lights" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>MANU GAMES / ACCESO</span>
+    </div>
+    <div class="auth-body">
+      <h2 id="access-title" class="terminal-heading">{{authMode==='register'?'Registro de usuario':authMode==='recovery'?'Recuperar acceso':'Inicio de sesión'}}</h2>
+      @if(authMode==='login'){
+        <img class="profile-avatar access-avatar" [src]="avatarImage()" width="60" height="60" alt="">
+      }
+      <div class="actions auth-modes">
+        <button type="button" [attr.aria-pressed]="authMode==='login'" (click)="authMode='login'">Ingresar</button>
+        <button type="button" [attr.aria-pressed]="authMode==='register'" (click)="authMode='register'">Registrarme</button>
+        <button type="button" [attr.aria-pressed]="authMode==='recovery'" (click)="authMode='recovery'">Recuperar acceso</button>
+      </div>
+      <form class="stack" (submit)="authenticate($event)">
+        @if(authMode==='register'){
+          <ng-container [ngTemplateOutlet]="avatarOptions" [ngTemplateOutletContext]="{$implicit:'memo'}"></ng-container>
+          <label>Nombre<input name="name" autocomplete="name" required minlength="2" maxlength="90"></label>
+        }
+        <label>Correo electrónico<input name="email" type="email" autocomplete="email" required maxlength="180"></label>
+        @if(authMode!=='recovery'){<label>Contraseña<input name="password" type="password" [attr.autocomplete]="authMode==='register'?'new-password':'current-password'" [attr.minlength]="authMode==='register'?12:1" maxlength="128" required></label>}
+        @if(authMode==='register'){
+          <label>Confirmar contraseña<input name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+          <p class="muted">Usa una contraseña de al menos 12 caracteres y datos ficticios.</p>
+          <a href="#ayuda">Lee el aviso y los términos de prueba</a>
+          <label class="check"><input name="accepted" type="checkbox" required> Acepto los términos y consulté el aviso de privacidad.</label>
+        }
+        <button class="primary" [disabled]="busy">{{authMode==='register'?'Crear cuenta':authMode==='recovery'?'Solicitar recuperación de prueba':'Iniciar sesión'}}</button>
+      </form>
+    </div>
   </section>
+</ng-template>
+<ng-template #avatarOptions let-selected>
+  <fieldset class="avatar-picker">
+    <legend>Selecciona tu avatar</legend>
+    <div class="avatar-grid">
+      @for(option of avatars; track option.id){
+        <label class="avatar-option">
+          <input type="radio" name="avatar" [value]="option.id" [checked]="option.id===selected">
+          <img [src]="avatarImage(option.id)" width="46" height="46" alt="">
+          <span>{{option.name}}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
 </ng-template>
 <ng-template #addressForm>
   <form class="stack" (submit)="address($event)">

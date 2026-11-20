@@ -2,14 +2,15 @@ const { createServer } = require('node:http');
 const { readFile, stat } = require('node:fs/promises');
 const { extname, resolve, sep } = require('node:path');
 const { openDatabase, Problem, requireValue, emailOf, passwordOf, passwordHash, verifyPassword,
-  token, digest, transaction, audit, field, integer, termsVersion } = require('./foundation.cjs');
+  token, digest, transaction, audit, field, integer, avatarId, termsVersion } = require('./foundation.cjs');
 const shop = require('./commerce.cjs');
 const support = require('./support.cjs');
 const admin = require('./admin.cjs');
+const { CloudStorageError } = require('./firebase-store.cjs');
 const sessionAge = 8 * 3600 * 1000;
 const maxBody = 24 * 1024;
 const mimes = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
-  '.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2','.json':'application/json' };
+  '.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon','.woff2':'font/woff2','.json':'application/json' };
 
 async function readJson(req){
   requireValue(req.headers['content-type']?.split(';')[0]?.trim().toLowerCase()==='application/json','Envía datos JSON.',415);
@@ -29,30 +30,31 @@ async function readJson(req){
 }
 
 function createApp(options={}){
-  const db=options.db ?? openDatabase();
-  if (options.seed!==false) shop.seedCatalog(db);
+  const persistence=options.persistence;
+  const localDb=options.db??(persistence?null:openDatabase());
+  if(localDb&&options.seed!==false)shop.seedCatalog(localDb);
   const root=resolve(options.publicDir||resolve(__dirname,'../../dist/Front_end/browser'));
   const publicOrigin=options.origin||process.env.PUBLIC_ORIGIN;
   const secure=publicOrigin?.startsWith('https://') ?? false;
   const production=options.production ?? process.env.NODE_ENV==='production';
   if(production && !secure) throw Error('Define PUBLIC_ORIGIN con HTTPS en producción.');
-  const cookieName=secure?'__Host-manu':'manu_dev';
+  const cookieName=process.env.FIREBASE_HOSTING_PROXY==='1'?'__session':secure?'__Host-manu':'manu_dev';
   const rates = new Map();
   const routes=[];
   const add=(method, pattern, access, handler)=>routes.push({method,pattern:new RegExp('^'+pattern+'$'),access,handler});
-  const account='SELECT id,name,email,role,active,created_at FROM users';
-  const getUser=id=>db.prepare(account+' WHERE id=? AND active=1').get(id||0)||null;
-  function setCookie(res,value,seconds){
-    res.setHeader('Set-Cookie',`${cookieName}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${seconds}${secure?'; Secure':''}`);
+  const account='SELECT id,name,email,role,avatar,active,created_at FROM users';
+  const getUser=(db,id)=>db.prepare(account+' WHERE id=? AND active=1').get(id||0)||null;
+  function setCookie(headers,value,seconds){
+    headers.set('Set-Cookie',`${cookieName}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${seconds}${secure?'; Secure':''}`);
   }
-  function current(req){
+  function current(db,req){
     const raw=req.headers.cookie?.split(/;\s*/).find(c=>c.startsWith(cookieName+'='))?.split('=')[1];
     if(!raw||!/^[a-f0-9]{48}$/.test(raw))return null;
     const session=db.prepare('SELECT * FROM sessions WHERE id=? AND expires_at>?').get(digest(raw),Date.now());
-    if(!session||(session.user_id&&!getUser(session.user_id)))return null;
-    return {...session,user:getUser(session.user_id)};
+    if(!session||(session.user_id&&!getUser(db,session.user_id)))return null;
+    return {...session,user:getUser(db,session.user_id)};
   }
-  function newSession(res,userId,previous){
+  function newSession(db,responseHeaders,userId,previous){
     const raw=token();
     const id=digest(raw);
     const csrf=token();
@@ -64,8 +66,8 @@ function createApp(options={}){
       }
       db.prepare('DELETE FROM sessions WHERE expires_at<=?').run(Date.now());
     });
-    setCookie(res,raw,sessionAge/1000);
-    return {id,csrf,user:getUser(userId)};
+    setCookie(responseHeaders,raw,sessionAge/1000);
+    return {id,csrf,user:getUser(db,userId)};
   }
   function sessionPayload(session){
     return {user:session.user,csrf:session.csrf,termsVersion};
@@ -88,25 +90,28 @@ function createApp(options={}){
     const expected=publicOrigin||'http://'+req.headers.host;
     requireValue(origin===expected,'Origen no autorizado.',403);
   }
-  const cleanUser=user=>user&&({id:user.id,name:user.name,email:user.email,role:user.role});
-  add('GET','/health','public',()=>({ok:true,db:db.prepare('SELECT 1 ready').get().ready===1,version:'1.0.0'}));
-  add('GET','/auth/session','public',c=>sessionPayload(c.session||newSession(c.res)));
+  const cleanUser=user=>user&&({id:user.id,name:user.name,email:user.email,role:user.role,avatar:user.avatar});
+  add('GET','/health','public',({db})=>({ok:true,db:db.prepare('SELECT 1 ready').get().ready===1,storage:persistence?'firebase':'sqlite',version:'1.0.0'}));
+  add('GET','/auth/session','public',c=>sessionPayload(c.session||newSession(c.db,c.responseHeaders)));
   add('POST','/auth/register','guest',async c=>{
+    const {db}=c;
     throttle(c.req,'auth',10);
     requireValue(c.body.accepted===true,'Acepta términos y consulta el aviso de privacidad.');
     const name=field(c.body.name,'nombre',2,90);
     const email=emailOf(c.body.email);
+    const avatar=avatarId(c.body.avatar);
     const hash=await passwordHash(passwordOf(c.body.password));
     const id=transaction(db,()=>{
       requireValue(!db.prepare('SELECT id FROM users WHERE email=?').get(email),'Ya existe una cuenta con ese correo.',409);
-      const id=Number(db.prepare('INSERT INTO users(name,email,password_hash) VALUES(?,?,?)').run(name,email,hash).lastInsertRowid);
+      const id=Number(db.prepare('INSERT INTO users(name,email,password_hash,avatar) VALUES(?,?,?,?)').run(name,email,hash,avatar).lastInsertRowid);
       audit(db,id,'registered','user',id);
       return id;
     });
     c.status=201;
-    return sessionPayload(newSession(c.res,id,c.session));
+    return sessionPayload(newSession(db,c.responseHeaders,id,c.session));
   });
   add('POST','/auth/login','guest',async c=>{
+    const {db}=c;
     throttle(c.req,'auth',10);
     const email=emailOf(c.body.email);
     const secret=c.body.password;
@@ -118,15 +123,17 @@ function createApp(options={}){
       throw new Problem(401,'Credenciales inválidas.');
     }
     audit(db,user.id,'login','user',user.id);
-    return sessionPayload(newSession(c.res,user.id,c.session));
+    return sessionPayload(newSession(db,c.responseHeaders,user.id,c.session));
   });
   add('POST','/auth/logout','client',c=>{
+    const {db}=c;
     db.prepare('DELETE FROM sessions WHERE id=?').run(c.session.id);
     audit(db,c.user.id,'logout','user',c.user.id);
-    setCookie(c.res,'',0);
+    setCookie(c.responseHeaders,'',0);
     return {ok:true};
   });
   add('POST','/auth/recovery','guest',c=>{
+    const {db}=c;
     throttle(c.req,'recovery',5);
     emailOf(c.body.email);
     audit(db,null,'recovery_simulated','security','recovery');
@@ -135,11 +142,14 @@ function createApp(options={}){
   });
   add('GET','/profile','client',c=>cleanUser(c.user));
   add('PATCH','/profile','client',c=>{
-    db.prepare('UPDATE users SET name=? WHERE id=?').run(field(c.body.name,'nombre',2,90),c.user.id);
-    return cleanUser(getUser(c.user.id));
+    const {db}=c;
+    const avatar=c.body.avatar===undefined ? c.user.avatar : avatarId(c.body.avatar);
+    db.prepare('UPDATE users SET name=?,avatar=? WHERE id=?').run(field(c.body.name,'nombre',2,90),avatar,c.user.id);
+    return cleanUser(getUser(db,c.user.id));
   });
-  add('GET','/addresses','client',c=>db.prepare('SELECT id,recipient,street,city,region,postal_code FROM addresses WHERE user_id=? ORDER BY id').all(c.user.id));
+  add('GET','/addresses','client',c=>c.db.prepare('SELECT id,recipient,street,city,region,postal_code FROM addresses WHERE user_id=? ORDER BY id').all(c.user.id));
   add('POST','/addresses','client',c=>{
+    const {db}=c;
     const cp=field(c.body.postal_code,'código postal',5,5);
     requireValue(/^\d{5}$/.test(cp),'Código postal mexicano de cinco dígitos.');
     const id=db.prepare('INSERT INTO addresses(user_id,recipient,street,city,region,postal_code) VALUES(?,?,?,?,?,?)').run(
@@ -149,56 +159,60 @@ function createApp(options={}){
     return {id:Number(id)};
   });
   add('DELETE','/addresses/(\\d+)','client',c=>{
+    const {db}=c;
     requireValue(db.prepare('DELETE FROM addresses WHERE user_id=? AND id=?').run(c.user.id,c.id).changes,'Dirección no encontrada.',404);
     return {ok:true};
   });
-  add('GET','/categories','public',()=>db.prepare('SELECT id,name FROM categories WHERE active=1 ORDER BY name').all());
-  add('GET','/products','public',c=>shop.catalogPage(db,c.url.searchParams));
+  add('GET','/categories','public',({db})=>db.prepare(`SELECT id,name FROM categories WHERE active=1
+    ORDER BY CASE name WHEN 'Juegos' THEN 0 WHEN 'DLCs' THEN 1 WHEN 'Complementos' THEN 2 ELSE 3 END,name`).all());
+  add('GET','/products','public',c=>shop.catalogPage(c.db,c.url.searchParams));
   add('GET','/products/(\\d+)','public',c=>{
+    const {db}=c;
     const row=db.prepare(shop.listProducts+' WHERE p.id=? AND p.active=1 AND c.active=1').get(c.id);
     requireValue(row,'Producto no encontrado.',404);
     const variants=db.prepare(`${shop.listProducts} WHERE p.family=? AND p.id<>? AND p.active=1 AND c.active=1`).all(row.family,c.id);
     return {...row,variants};
   });
-  add('GET','/cart','public',c=>shop.cart(db,c.session?.id));
+  add('GET','/cart','public',c=>shop.cart(c.db,c.session?.id));
   add('POST','/cart','guest',c=>{
     const product=integer(c.body.productId,'producto',1,1e9);
-    const currentQuantity=db.prepare('SELECT quantity FROM carts WHERE session_id=? AND product_id=?').get(c.session.id,product)?.quantity||0;
-    return shop.setCart(db,c.session.id,product,currentQuantity+integer(c.body.quantity,'cantidad',1,99));
+    const currentQuantity=c.db.prepare('SELECT quantity FROM carts WHERE session_id=? AND product_id=?').get(c.session.id,product)?.quantity||0;
+    return shop.setCart(c.db,c.session.id,product,currentQuantity+integer(c.body.quantity,'cantidad',1,99));
   });
-  add('PATCH','/cart/(\\d+)','guest',c=>shop.setCart(db,c.session.id,c.id,integer(c.body.quantity,'cantidad',1,99)));
-  add('DELETE','/cart/(\\d+)','guest',c=>shop.setCart(db,c.session.id,c.id,0));
-  add('POST','/quote','guest',c=>shop.quote(db,c.session.id,c.body));
-  add('POST','/orders','client',c=>{c.status=201;return shop.createOrder(db,c.session,c.body);});
-  add('GET','/orders','client',c=>db.prepare(`SELECT id,folio,status,total,created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 250`).all(c.user.id));
-  add('GET','/orders/(\\d+)','client',c=>shop.orderDetail(db,c.id,c.user));
-  add('POST','/payments/(\\d+)/confirm','client',c=>shop.confirmPayment(db,c.session,c.id,c.body));
+  add('PATCH','/cart/(\\d+)','guest',c=>shop.setCart(c.db,c.session.id,c.id,integer(c.body.quantity,'cantidad',1,99)));
+  add('DELETE','/cart/(\\d+)','guest',c=>shop.setCart(c.db,c.session.id,c.id,0));
+  add('POST','/quote','guest',c=>shop.quote(c.db,c.session.id,c.body));
+  add('POST','/orders','client',c=>{c.status=201;return shop.createOrder(c.db,c.session,c.body);});
+  add('GET','/orders','client',c=>c.db.prepare(`SELECT id,folio,status,total,created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 250`).all(c.user.id));
+  add('GET','/library','client',c=>shop.library(c.db,c.user.id));
+  add('GET','/orders/(\\d+)','client',c=>shop.orderDetail(c.db,c.id,c.user));
+  add('POST','/payments/(\\d+)/confirm','client',c=>shop.confirmPayment(c.db,c.session,c.id,c.body));
   add('GET','/payments/(\\d+)','client',c=>{
-    const order=shop.orderDetail(db,c.id,c.user);
+    const order=shop.orderDetail(c.db,c.id,c.user);
     return {status:order.payment_status,reference:order.reference,amount:order.total,provider:'simulator'};
   });
-  add('GET','/returns','client',c=>support.caseList(db,{...c.user,role:'client'}));
-  add('POST','/returns','client',c=>{c.status=201;return support.createCase(db,c.user,c.body);});
-  add('POST','/returns/(\\d+)/messages','client',c=>support.addCaseMessage(db,c.user,c.id,c.body));
-  add('GET','/admin/products','admin',()=>db.prepare(shop.listProducts+' ORDER BY p.id DESC LIMIT 250').all());
-  add('POST','/admin/products','admin',c=>{c.status=201;return admin.saveProduct(db,c.user,null,c.body);});
-  add('PATCH','/admin/products/(\\d+)','admin',c=>admin.saveProduct(db,c.user,c.id,c.body));
-  add('DELETE','/admin/products/(\\d+)','admin',c=>admin.disable(db,c.user,'product',c.id));
-  add('GET','/admin/categories','admin',()=>db.prepare('SELECT * FROM categories ORDER BY name').all());
-  add('POST','/admin/categories','admin',c=>{c.status=201;return admin.saveCategory(db,c.user,null,c.body);});
-  add('PATCH','/admin/categories/(\\d+)','admin',c=>admin.saveCategory(db,c.user,c.id,c.body));
-  add('DELETE','/admin/categories/(\\d+)','admin',c=>admin.disable(db,c.user,'category',c.id));
-  add('GET','/admin/orders','admin',()=>db.prepare('SELECT id,folio,status,total,created_at FROM orders ORDER BY id DESC LIMIT 250').all());
-  add('PATCH','/admin/orders/(\\d+)','admin',c=>shop.transitionOrder(db,c.user,c.id,c.body));
-  add('GET','/admin/inventory','admin',()=>db.prepare('SELECT * FROM inventory_movements ORDER BY id DESC LIMIT 250').all());
-  add('POST','/admin/inventory/(\\d+)','admin',c=>admin.inventory(db,c.user,c.id,c.body));
-  add('GET','/admin/coupons','admin',()=>db.prepare('SELECT * FROM coupons ORDER BY code').all());
-  add('POST','/admin/coupons','admin',c=>admin.saveCoupon(db,c.user,c.body));
-  add('GET','/admin/returns','admin',c=>support.caseList(db,c.user));
-  add('PATCH','/admin/returns/(\\d+)','admin',c=>support.resolveCase(db,c.user,c.id,c.body));
-  add('GET','/admin/customers','admin',()=>db.prepare(account+" WHERE role='client' ORDER BY id DESC LIMIT 250").all());
-  add('GET','/admin/reports','admin',()=>admin.reports(db));
-  add('GET','/admin/audit','admin',()=>db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 250').all());
+  add('GET','/returns','client',c=>support.caseList(c.db,{...c.user,role:'client'}));
+  add('POST','/returns','client',c=>{c.status=201;return support.createCase(c.db,c.user,c.body);});
+  add('POST','/returns/(\\d+)/messages','client',c=>support.addCaseMessage(c.db,c.user,c.id,c.body));
+  add('GET','/admin/products','admin',c=>c.db.prepare(shop.listProducts+' ORDER BY p.id DESC LIMIT 250').all());
+  add('POST','/admin/products','admin',c=>{c.status=201;return admin.saveProduct(c.db,c.user,null,c.body);});
+  add('PATCH','/admin/products/(\\d+)','admin',c=>admin.saveProduct(c.db,c.user,c.id,c.body));
+  add('DELETE','/admin/products/(\\d+)','admin',c=>admin.disable(c.db,c.user,'product',c.id));
+  add('GET','/admin/categories','admin',c=>c.db.prepare('SELECT * FROM categories ORDER BY name').all());
+  add('POST','/admin/categories','admin',c=>{c.status=201;return admin.saveCategory(c.db,c.user,null,c.body);});
+  add('PATCH','/admin/categories/(\\d+)','admin',c=>admin.saveCategory(c.db,c.user,c.id,c.body));
+  add('DELETE','/admin/categories/(\\d+)','admin',c=>admin.disable(c.db,c.user,'category',c.id));
+  add('GET','/admin/orders','admin',c=>c.db.prepare('SELECT id,folio,status,total,created_at FROM orders ORDER BY id DESC LIMIT 250').all());
+  add('PATCH','/admin/orders/(\\d+)','admin',c=>shop.transitionOrder(c.db,c.user,c.id,c.body));
+  add('GET','/admin/inventory','admin',c=>c.db.prepare('SELECT * FROM inventory_movements ORDER BY id DESC LIMIT 250').all());
+  add('POST','/admin/inventory/(\\d+)','admin',c=>admin.inventory(c.db,c.user,c.id,c.body));
+  add('GET','/admin/coupons','admin',c=>c.db.prepare('SELECT * FROM coupons ORDER BY code').all());
+  add('POST','/admin/coupons','admin',c=>admin.saveCoupon(c.db,c.user,c.body));
+  add('GET','/admin/returns','admin',c=>support.caseList(c.db,c.user));
+  add('PATCH','/admin/returns/(\\d+)','admin',c=>support.resolveCase(c.db,c.user,c.id,c.body));
+  add('GET','/admin/customers','admin',c=>c.db.prepare(account+" WHERE role='client' ORDER BY id DESC LIMIT 250").all());
+  add('GET','/admin/reports','admin',c=>admin.reports(c.db));
+  add('GET','/admin/audit','admin',c=>c.db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 250').all());
   add('GET','/info','public',()=>({termsVersion,provider:'Manu Games · operador académico ficticio',payment:'simulated'}));
 
   async function staticFile(url,res){
@@ -230,27 +244,36 @@ function createApp(options={}){
       const path=url.pathname.slice(4);
       const route=routes.find(entry=>entry.method===req.method&&entry.pattern.test(path));
       requireValue(route,'Ruta no encontrada.',404);
-      const session=current(req);
-      const user=session?.user;
-      if(route.access!=='public'){
-        requireValue(session,'Obtén o renueva la sesión.',401);
-        if(route.access!=='guest') requireValue(user,'Inicia sesión.',401);
-        if(route.access==='admin') {
-          if(user.role!=='admin') audit(db,user.id,'access_denied','security','admin');
-          requireValue(user.role==='admin','Permisos insuficientes.',403);
+      const mutation=req.method!=='GET';
+      if(mutation)validateOrigin(req);
+      const body=['POST','PATCH'].includes(req.method)?await readJson(req):{};
+      const responseHeaders=new Map();
+      async function dispatch(db){
+        try {
+          const session=route.access==='public'&&path!=='/auth/session'&&path!=='/cart'?null:current(db,req);
+          const user=session?.user;
+          if(route.access!=='public'){
+            requireValue(session,'Obtén o renueva la sesión.',401);
+            if(route.access!=='guest') requireValue(user,'Inicia sesión.',401);
+            if(route.access==='admin'){
+              if(user.role!=='admin')audit(db,user.id,'access_denied','security','admin');
+              requireValue(user.role==='admin','Permisos insuficientes.',403);
+            }
+          }
+          if(mutation)requireValue(session?.csrf && session.csrf===req.headers['x-csrf-token'],'Solicitud protegida inválida.',403);
+          const context={db,req,responseHeaders,url,session,user,body,id:Number(route.pattern.exec(path)[1]),status:200};
+          const value=await route.handler(context);
+          return {status:context.status,value};
+        } catch(err) {
+          if(err instanceof Problem)return {status:err.status,value:{error:err.message}};
+          throw err;
         }
       }
-      const mutation=req.method!=='GET';
-      if(mutation){
-        validateOrigin(req);
-        requireValue(session?.csrf && session.csrf===req.headers['x-csrf-token'],'Solicitud protegida inválida.',403);
-      }
-      const body=['POST','PATCH'].includes(req.method)?await readJson(req):{};
-      const context={req,res,url,session,user,body,id:Number(route.pattern.exec(path)[1]),status:200};
-      const value=await route.handler(context);
-      send(context.status,value);
+      const result=persistence?await persistence.run(dispatch,{write:mutation||path==='/auth/session'||route.access==='admin'}):await dispatch(localDb);
+      for(const [name,value] of responseHeaders)res.setHeader(name,value);
+      send(result.status,result.value);
     } catch(err){
-      if(err instanceof Problem)send(err.status,{error:err.message});
+      if(err instanceof Problem||err instanceof CloudStorageError)send(err.status,{error:err.message});
       else {
         console.error('Error de operación',err.code||err.name);
         send(500,{error:'No se pudo completar la operación.'});
@@ -259,6 +282,6 @@ function createApp(options={}){
   });
   server.requestTimeout=15000;
   server.headersTimeout=12000;
-  return {server,db};
+  return {server,db:localDb};
 }
 module.exports={createApp};

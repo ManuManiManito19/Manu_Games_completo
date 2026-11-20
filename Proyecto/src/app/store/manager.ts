@@ -17,7 +17,15 @@ export class Manager implements OnInit {
   editing?:Product; editingCategory?:Category; editingCoupon?:Coupon; order?:Order;
   readonly tabs:[Tab,string][]=[['resumen','Resumen y reportes'],['productos','Productos'],['categorias','Categorías'],['inventario','Inventario'],
     ['pedidos','Pedidos'],['clientes','Clientes'],['cupones','Promociones'],['casos','Solicitudes'],['bitacora','Auditoría']];
-  readonly covers=Array.from({length:16},(_,i)=>i+1);
+  get covers(){
+    const choices=Array.from({length:16},(_,i)=>({url:'/covers/'+(i+1)+'.jpg', name:'Ilustración '+(i+1)}));
+    for(const product of this.products){
+      if(product.image.startsWith('/games/')&&!choices.some(cover=>cover.url===product.image)){
+        choices.push({url:product.image, name:product.name});
+      }
+    }
+    return choices;
+  }
   estado(s:string){return labels[s]||s;}
   format(n:number){return mx.format(n/100);}
   ngOnInit(){void this.select('resumen');}

@@ -5,6 +5,8 @@ const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, resolve, join } = require('node:path');
 const derive = promisify(scrypt);
 const termsVersion = '2026-11-19';
+const migrations = ['001-initial.sql', '002-terminal.sql'];
+const avatarIds = ['memo', 'cyber', 'gamer', 'neon', 'hacker'];
 
 class Problem extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -46,6 +48,10 @@ function passwordOf(value) {
 function searchKey(value) {
   return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
+function avatarId(value = 'memo') {
+  requireValue(avatarIds.includes(value), 'Selecciona un avatar del catálogo.');
+  return value;
+}
 function openDatabase(location = process.env.DB_PATH || join(__dirname, '../data/store.sqlite')) {
   if (location !== ':memory:') mkdirSync(dirname(resolve(location)), { recursive: true });
   const db = new DatabaseSync(location);
@@ -53,9 +59,13 @@ function openDatabase(location = process.env.DB_PATH || join(__dirname, '../data
   db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
   db.exec('CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP) STRICT');
   transaction(db, () => {
-    if (!db.prepare('SELECT version FROM schema_migrations WHERE version=1').get()) {
-      db.exec(readFileSync(join(__dirname, '../db/001-initial.sql'), 'utf8'));
-      db.exec('INSERT INTO schema_migrations(version) VALUES(1)');
+    const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE version=?');
+    const record = db.prepare('INSERT INTO schema_migrations(version) VALUES(?)');
+    for (const [index, file] of migrations.entries()) {
+      const version = index + 1;
+      if (applied.get(version)) continue;
+      db.exec(readFileSync(join(__dirname, '../db', file), 'utf8'));
+      record.run(version);
     }
   });
   return db;
@@ -74,4 +84,4 @@ function transaction(db, work) {
 function audit(db, actor, action, entity, id, detail = null) {
   db.prepare('INSERT INTO audit_logs(actor_id,action,entity,entity_id,detail) VALUES(?,?,?,?,?)').run(actor, action, entity, String(id), detail);
 }
-module.exports = { openDatabase, transaction, audit, Problem, requireValue, field, integer, emailOf, passwordHash, verifyPassword, passwordOf, searchKey, token, digest, termsVersion };
+module.exports = { openDatabase, transaction, audit, Problem, requireValue, field, integer, emailOf, passwordHash, verifyPassword, passwordOf, avatarId, searchKey, token, digest, termsVersion };

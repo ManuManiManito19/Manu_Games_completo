@@ -3,11 +3,49 @@ const assert=require('node:assert/strict');
 const { mkdtempSync,rmSync,readFileSync,writeFileSync }=require('node:fs');
 const { join }=require('node:path');
 const { tmpdir }=require('node:os');
+const { DatabaseSync }=require('node:sqlite');
 const { openDatabase,passwordHash }=require('../src/foundation.cjs');
 const { createApp }=require('../src/http.cjs');
+const { seedCatalog }=require('../src/commerce.cjs');
 const { makeBackup,restoreBackup }=require('../src/backup.cjs');
 const syntheticPassword='Prueba-esto-2026';
 const demoAddress={recipient:'Cuenta de prueba',street:'Av. Simulada 100',city:'Nuevo Laredo',region:'Tamaulipas',postal_code:'88000'};
+
+test('La migración conserva usuarios e inventario de la versión anterior',t=>{
+  const folder=mkdtempSync(join(tmpdir(),'manu-migration-'));
+  const path=join(folder,'store.sqlite');
+  t.after(()=>rmSync(folder,{recursive:true,force:true}));
+  const previous=new DatabaseSync(path);
+  previous.exec(readFileSync(join(__dirname,'../db/001-initial.sql'),'utf8'));
+  previous.exec(`CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP) STRICT;
+    INSERT INTO schema_migrations(version) VALUES(1);
+    INSERT INTO users(name,email,password_hash) VALUES('Cliente','cliente@example.test','hash de fixture');
+    INSERT INTO categories(id,name) VALUES(1,'Juegos'),(2,'Complementos'),(3,'Suscripciones');
+    INSERT INTO products(sku,category_id,name,family,description,platform,image,price,stock)
+    VALUES ('MG-017',1,'Grand Theft Auto VI','GTA','Juego de prueba','PC','/covers/3.jpg',180000,7),
+    ('MG-018',2,'Phantom Liberty','PL','DLC de prueba','PC','/covers/11.jpg',99000,3),
+    ('MG-027',3,'PS Plus','PS Plus','Suscripción de prueba','PS5','/covers/13.jpg',14900,2)`);
+  previous.close();
+  const upgraded=openDatabase(path);
+  try {
+    assert.equal(upgraded.prepare('SELECT avatar FROM users WHERE id=1').get().avatar,'memo');
+    assert.deepEqual(upgraded.prepare(`SELECT p.sku,c.name,p.stock,p.image FROM products p
+      JOIN categories c ON c.id=p.category_id ORDER BY p.sku`).all().map(row=>[row.sku,row.name,row.stock,row.image]),[
+      ['MG-017','Juegos',7,'/games/gta6.jpg'],
+      ['MG-018','DLCs',3,'/games/phantom-liberty.jpg'],
+      ['MG-027','Complementos',2,'/games/playstation-plus-1-mes.jpg'],
+    ]);
+    assert.equal(upgraded.prepare("SELECT active FROM categories WHERE name='Suscripciones'").get().active,0);
+    seedCatalog(upgraded);
+    seedCatalog(upgraded);
+    assert.equal(upgraded.prepare('SELECT COUNT(*) AS count FROM products').get().count,10);
+    assert.equal(upgraded.prepare("SELECT stock FROM products WHERE sku='MG-017'").get().stock,7);
+    assert.equal(upgraded.prepare("SELECT stock FROM products WHERE sku='MG-043'").get().stock,0);
+    assert.deepEqual(upgraded.prepare('PRAGMA foreign_key_check').all(),[]);
+  } finally {
+    upgraded.close();
+  }
+});
 
 test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   const db=openDatabase(':memory:');
@@ -33,14 +71,21 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   const qty=id=>db.prepare('SELECT stock FROM products WHERE id=?').get(id).stock;
   const caseDesc={reason:'Código de demostración requiere revisión.'};
   await t.test('E01 catálogo paginado, filtros y ficha con variantes',async()=>{
-    assert.equal((await buyer('GET','/products')).total,36);
-    const subscriptions=(await buyer('GET','/categories')).find(category=>category.name==='Suscripciones');
-    assert.equal((await buyer('GET','/products?category='+subscriptions.id)).total,4);
+    assert.equal((await buyer('GET','/products')).total,43);
+    const categories=await buyer('GET','/categories');
+    assert.deepEqual(categories.map(category=>category.name),['Juegos','DLCs','Complementos']);
+    for(const [index,total] of [30,3,10].entries()){
+      const result=await buyer('GET','/products?category='+categories[index].id);
+      assert.equal(result.total,total);
+      assert.ok(result.items.every(item=>item.category===categories[index].name));
+    }
+    const featured=await buyer('GET','/products?sort=featured');
+    assert.ok(featured.items.every(item=>item.image.startsWith('/games/')));
     const result=await buyer('GET','/products?q=Horizonte&max=50000&stock=1&sort=ascending');
     assert.equal(result.total,2);
     assert.equal(result.items[0].sku,'MG-016');
     const initial = await buyer('GET','/products?q=c');
-    assert.equal(initial.total,7);
+    assert.equal(initial.total,8);
     assert.ok(initial.items.every(item=>item.name.startsWith('C')));
     assert.equal((await buyer('GET','/products?q=Codice')).total,1);
     assert.equal((await buyer('GET','/products/1')).variants.length,1);
@@ -57,9 +102,13 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   });
   await t.test('E03 registro con hash, rotación, entrada especial y control por rol/CSRF',async()=>{
     const name='Ana <Caso> & O\'Brien';
-    const session=await buyer('POST','/auth/register',{name,email:'ana@example.test',password:syntheticPassword,accepted:true},201);
+    const session=await buyer('POST','/auth/register',{name,email:'ana@example.test',password:syntheticPassword,avatar:'neon',accepted:true},201);
     assert.equal(session.user.role,'client');
+    assert.equal(session.user.avatar,'neon');
     assert.equal((await buyer('GET','/profile')).name,name);
+    await buyer('PATCH','/profile',{name,avatar:'desconocido'},400);
+    assert.equal((await buyer('PATCH','/profile',{name,avatar:'cyber'})).avatar,'cyber');
+    assert.equal((await buyer('GET','/auth/session')).user.avatar,'cyber');
     const hash=db.prepare('SELECT password_hash FROM users WHERE id=?').get(session.user.id).password_hash;
     assert.match(hash,/^[a-f0-9]{32}:[a-f0-9]{128}$/);
     assert.ok(!hash.includes(syntheticPassword));

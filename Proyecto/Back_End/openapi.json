@@ -14,7 +14,7 @@
     "/health": {
       "get": {
         "operationId": "getHealth",
-        "summary": "Comprobar disponibilidad de la API y lectura de SQLite",
+        "summary": "Comprobar disponibilidad de la API y su almacenamiento",
         "description": "Acceso: público.",
         "tags": [
           "health"
@@ -27,15 +27,36 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": [
-                    "object",
-                    "array"
-                  ]
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "db",
+                    "storage",
+                    "version"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "db": {
+                      "type": "boolean"
+                    },
+                    "storage": {
+                      "enum": [
+                        "sqlite",
+                        "firebase"
+                      ]
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  }
                 },
                 "example": {
                   "ok": true,
                   "db": true,
-                  "version": "1.0.0"
+                  "version": "1.0.0",
+                  "storage": "firebase"
                 }
               }
             }
@@ -277,6 +298,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -439,6 +463,18 @@
                     "examples": [
                       true
                     ]
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "enum": [
+                      "memo",
+                      "cyber",
+                      "gamer",
+                      "neon",
+                      "hacker"
+                    ],
+                    "description": "Identificador del avatar local.",
+                    "example": "neon"
                   }
                 },
                 "required": [
@@ -467,6 +503,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -641,6 +680,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -796,6 +838,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -954,6 +999,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -1076,6 +1124,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -1209,6 +1260,18 @@
                     "examples": [
                       "Cliente de prueba"
                     ]
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "enum": [
+                      "memo",
+                      "cyber",
+                      "gamer",
+                      "neon",
+                      "hacker"
+                    ],
+                    "description": "Identificador del avatar local.",
+                    "example": "neon"
                   }
                 },
                 "required": [
@@ -1234,6 +1297,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -1356,6 +1422,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -1546,6 +1615,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -1852,9 +1924,16 @@
             "name": "sort",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "featured",
+                "name",
+                "ascending",
+                "descending",
+                "newest"
+              ]
             },
-            "description": "Filtro de catálogo",
+            "description": "Destacados con portada del catálogo original, nombre, precio o novedades.",
             "example": "ascending"
           },
           {
@@ -2231,6 +2310,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -2397,6 +2479,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -2563,6 +2648,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -2707,6 +2795,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -2872,6 +2963,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -3083,6 +3177,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -3207,6 +3304,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -3342,6 +3442,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -3510,6 +3613,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -3651,6 +3757,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -3773,6 +3882,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -3965,6 +4077,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -4133,6 +4248,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -4255,6 +4373,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -4475,6 +4596,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -4703,6 +4827,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -4847,6 +4974,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -4969,6 +5099,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -5134,6 +5267,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -5307,6 +5443,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -5451,6 +5590,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -5575,6 +5717,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -5743,6 +5888,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -5867,6 +6015,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -6043,6 +6194,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -6165,6 +6319,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -6354,6 +6511,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -6478,6 +6638,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [
@@ -6661,6 +6824,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -6785,6 +6951,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -6909,6 +7078,9 @@
           },
           {
             "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
           }
         ],
         "parameters": [],
@@ -7140,6 +7312,132 @@
           }
         }
       }
+    },
+    "/library": {
+      "get": {
+        "operationId": "listOwnedProducts",
+        "summary": "Consultar los productos comprados por la cuenta activa",
+        "description": "Lista los artículos con pago aprobado o reembolsado. Requiere iniciar sesión.",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "sessionHttps": []
+          },
+          {
+            "sessionHosting": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Productos de la cuenta, incluida una lista vacía si corresponde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "order_id",
+                      "folio",
+                      "status",
+                      "sku",
+                      "name",
+                      "platform",
+                      "quantity",
+                      "license"
+                    ],
+                    "properties": {
+                      "order_id": {
+                        "type": "integer"
+                      },
+                      "folio": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "paid",
+                          "preparing",
+                          "sent",
+                          "delivered",
+                          "cancelled",
+                          "refunded"
+                        ]
+                      },
+                      "sku": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "platform": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "license": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Código simulado disponible cuando el pedido está entregado."
+                      }
+                    }
+                  }
+                },
+                "example": [
+                  {
+                    "order_id": 1,
+                    "folio": "MG-EJEMPLO",
+                    "status": "paid",
+                    "sku": "MG-001",
+                    "name": "Horizonte de Cobre",
+                    "platform": "PC",
+                    "quantity": 1,
+                    "license": null
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o vencida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno sin traza",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Almacenamiento no disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7169,6 +7467,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "__Host-manu"
+      },
+      "sessionHosting": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__session"
       }
     }
   }

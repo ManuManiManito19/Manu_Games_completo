@@ -53,6 +53,8 @@ node_modules-*/
 *.pem
 *.key
 *.pfx
+*-firebase-adminsdk-*.json
+firebase-debug.log
 
 /Back_End/data/
 /Back_End/backups/

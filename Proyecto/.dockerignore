@@ -1,0 +1,15 @@
+**
+!package.json
+!package-lock.json
+!angular.json
+!tsconfig*.json
+!src/
+!src/**
+!public/
+!public/**
+!Back_End/
+!Back_End/server.js
+!Back_End/src/
+!Back_End/src/**
+!Back_End/db/
+!Back_End/db/**

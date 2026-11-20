@@ -42,13 +42,23 @@ with sync_playwright() as p:
     firefox_only = os.environ.get("DEMO_SINGLE_BROWSER") == "firefox"
     chrome = p.firefox.launch() if firefox_only else p.chromium.launch(**opts)
     primary = "Firefox" if firefox_only else "Chromium"
+    second_engine = os.environ.get("DEMO_SECOND_BROWSER", "firefox")
     client = chrome.new_page(viewport={"width": 1280, "height": 890})
     violations = []
     client.on("pageerror", lambda err: violations.append(str(err)))
     client.on("console", lambda msg: violations.append(msg.text) if "Content Security Policy" in msg.text else None)
     client.goto(url, wait_until="load")
     expect(client.get_by_role("heading", name="Selección destacada")).to_be_visible()
-    expect(client.get_by_text("Horizonte de Cobre", exact=True)).to_be_visible()
+    expect(client.get_by_text("Minecraft", exact=True)).to_be_visible()
+    client.get_by_role("button", name="DLCs", exact=True).click()
+    expect(client.get_by_text("3 productos · página 1")).to_be_visible()
+    expect(client.locator('img[src="/games/shadow-of-the-erdtree.jpg"]')).to_be_visible()
+    client.get_by_role("button", name="Complementos", exact=True).click()
+    expect(client.get_by_text("10 productos · página 1")).to_be_visible()
+    client.get_by_role("link", name="Manu Games, inicio").click()
+    expect(client.get_by_role("heading", name="Selección destacada")).to_be_visible()
+    client.reload(wait_until="load")
+    expect(client.get_by_role("heading", name="Selección destacada")).to_be_visible()
     photo(client, "E01-inicio")
     results["navegadores"][primary] = {"version": chrome.version, "inicio": performance(client)}
     client.keyboard.press("Tab")
@@ -58,7 +68,7 @@ with sync_playwright() as p:
     search = client.get_by_role("searchbox", name="Buscar en la tienda")
     search.fill("m")
     search.press("Enter")
-    expect(client.get_by_text("1 producto · página 1")).to_be_visible()
+    expect(client.get_by_text("2 productos · página 1")).to_be_visible()
     expect(client.get_by_text("Marea de Hierro", exact=True)).to_be_visible()
     search.fill("Horizonte")
     search.press("Enter")
@@ -82,6 +92,9 @@ with sync_playwright() as p:
     client.get_by_label("Nombre",exact=True).fill("Cuenta académica")
     client.get_by_label("Correo electrónico").fill(f"demo-{nonce}@example.test")
     client.get_by_label("Contraseña",exact=True).fill("Prueba-Navegador-2026")
+    client.get_by_label("Confirmar contraseña",exact=True).fill("Prueba-Navegador-2026")
+    client.get_by_text("Neon", exact=True).click()
+    expect(client.get_by_role("radio", name="Neon", exact=True)).to_be_checked()
     client.get_by_text("Acepto los términos y consulté el aviso de privacidad.").click()
     client.get_by_role("button",name="Crear cuenta").click()
     expect(client.get_by_role("heading",name="Contacto y entrega")).to_be_visible(timeout=15000)
@@ -98,7 +111,13 @@ with sync_playwright() as p:
     folio=client.locator('h2').filter(has_text="· Pagado").inner_text().split(" · ")[0]
     photo(client, "E06-confirmacion")
     activity("Confirmar compra", "Aceptación, pago simulado, descuento y folio " + folio)
-    mobile = p.firefox.launch()
+    client.get_by_role("link", name="Mi cuenta").click()
+    bought=client.get_by_role("heading", name="Mis productos").locator("..")
+    expect(bought.get_by_text("Horizonte de Cobre", exact=True)).to_be_visible()
+    expect(bought.get_by_text("Licencia pendiente de entrega")).to_be_visible()
+    bought.get_by_role("link", name=folio).click()
+    mobile = chrome if second_engine == "same" else p.firefox.launch()
+    secondary = primary if mobile == chrome else "Firefox"
     manager = mobile.new_page(viewport={"width": 1160, "height": 850})
     manager.goto(url+"/#cuenta",wait_until="load")
     manager.get_by_label("Correo electrónico").fill(os.environ["DEMO_ADMIN_EMAIL"])
@@ -112,7 +131,7 @@ with sync_playwright() as p:
         manager.get_by_role("button",name=text).click()
     expect(manager.get_by_role("heading",name=folio+" · Entregado")).to_be_visible()
     photo(manager,"E08-pedido-admin")
-    activity("Operar pedido", "Administración cambió la secuencia hasta Entregado en Firefox")
+    activity("Operar pedido", "Administración cambió la secuencia hasta Entregado en " + secondary)
     client.reload()
     expect(client.get_by_role("heading",name=folio+" · Entregado")).to_be_visible()
     expect(client.get_by_text("Código de entrega de prueba")).to_be_visible()
@@ -134,7 +153,10 @@ with sync_playwright() as p:
     client.reload()
     expect(client.get_by_text(ticket+" · Devolución completada")).to_be_visible()
     activity("Solicitar devolución", "Folio " + ticket + " visible para comprador y resolución aplicada")
-    for engine,browser in ([(primary,chrome)] if firefox_only else [(primary,chrome),("Firefox",mobile)]):
+    browsers = [(primary, chrome)]
+    if mobile != chrome:
+        browsers.append((secondary, mobile))
+    for engine, browser in browsers:
         results["navegadores"].setdefault(engine,{"version":browser.version})
         for width in [360,768,1280]:
             screen=browser.new_page(viewport={"width":width,"height":900})
@@ -143,20 +165,22 @@ with sync_playwright() as p:
             expect(screen.get_by_text("Horizonte de Cobre", exact=True)).to_be_visible()
             assert screen.locator("body").evaluate("(el) => el.scrollWidth")<=width, (engine,width)
             assert screen.locator('label').count()>=5
-            if width==360 and engine=="Firefox":
+            if width==360 and engine==secondary:
                 photo(screen,"E10-movil")
             screen.close()
         results["navegadores"][engine]["anchosPx"]=[360,768,1280]
     client.get_by_role("button", name="Cerrar sesión").click()
-    expect(client.get_by_role("heading", name=re.compile("Tu próxima"))).to_be_visible()
+    expect(client.locator("#page-title")).to_have_text("Tienda de videojuegos")
     client.get_by_role("link", name="Iniciar sesión").click()
     client.get_by_label("Correo electrónico").fill(f"demo-{nonce}@example.test")
     client.get_by_label("Contraseña", exact=True).fill("Prueba-Navegador-2026")
     client.get_by_role("button", name="Iniciar sesión", exact=True).click()
-    expect(client.get_by_role("heading", name=re.compile("Tu próxima"))).to_be_visible()
+    expect(client.locator("#page-title")).to_have_text("Tienda de videojuegos")
+    expect(client.locator(".account-link img")).to_have_attribute("src", "/avatars/neon.png")
     expect(client.get_by_role("link", name="Mi cuenta")).to_be_visible()
     results["autenticacion"] = "El cliente vuelve a Inicio con su cuenta activa"
     assert not violations, violations
     chrome.close()
-    mobile.close()
+    if mobile != chrome:
+        mobile.close()
 (out / "resultados.json").write_text(json.dumps(results,ensure_ascii=False,indent=2),encoding="utf-8")
