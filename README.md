@@ -29,19 +29,29 @@ La tienda usa el estilo de terminal negra con neón verde del proyecto original.
 
 Es un entorno académico con **pagos, guías y códigos digitales simulados**. La demostración utiliza cuentas, domicilios e importes de prueba.
 
+## Vista previa en Firebase
+
+[Abrir el catálogo en Firebase Hosting](https://manugames-d4df7--catalogo-rv9owzi0.web.app). La vista previa incluye el catálogo de 43 productos, filtros, registro, inicio de sesión y perfil con foto. El canal caduca el 22 de diciembre de 2026. La demostración local incluye además el carrito, los pagos de prueba, el inventario y la operación administrativa.
+
 ## Cómo ejecutarlo en tu equipo
 
-Instala **Node.js 24** con npm. Abre la carpeta que contiene este README en Visual Studio Code y entra en `Proyecto` desde la terminal.
+Instala **Node.js 24** con npm. Clona este repositorio y arranca la demostración completa desde la terminal.
 
 ```bash
+git clone https://github.com/ManuManiManito19/Manu_Games_completo.git
+cd Manu_Games_completo
 cd Proyecto
 npm ci
-npm start
+npm run demo
 ```
 
-Abre [localhost:4200](http://localhost:4200). El arranque compila Angular e inicia la API. Una instalación local nueva prepara la base y el catálogo. El [endpoint de salud](http://localhost:4200/api/health) indica qué base está activa. La [guía de Firebase](Proyecto/README.md#guardar-los-datos-en-firebase) explica la conexión a Realtime Database y la publicación en Hosting con Cloud Run.
+Abre [127.0.0.1:4200](http://127.0.0.1:4200). El comando crea una base SQLite de prueba, importa los 43 productos y muestra en la terminal las credenciales administrativas generadas para esa ejecución. Registra un comprador con datos ficticios desde **Iniciar sesión → Registrarme**. Para usar el panel, abre una ventana privada y entra con la cuenta que muestra la terminal. Cada reinicio de `npm run demo` crea una base independiente.
 
-### Cuenta administrativa
+El [endpoint de salud](http://127.0.0.1:4200/api/health) indica qué base está activa. La [guía de Firebase](Proyecto/README.md#guardar-los-datos-en-firebase) explica la conexión a Realtime Database y la publicación en Hosting con Cloud Run.
+
+### Conservar datos entre reinicios
+
+Para desarrollo con una base persistente, usa `npm start`. Configura una cuenta administrativa propia de prueba de la siguiente manera.
 
 Si todavía no existe `Back_End/.env`, copia el archivo de configuración de ejemplo con PowerShell.
 
@@ -66,6 +76,8 @@ El servidor calcula los importes en centavos y vuelve a comprobar precio, dispon
 El [contrato OpenAPI](Proyecto/Back_End/openapi.json) reúne **48 operaciones** de catálogo, cuenta, carrito, pedidos, pagos, solicitudes y administración. Las [consultas de reporte](Proyecto/Back_End/db/reportes.sql) permiten revisar ventas aprobadas, existencias, solicitudes y movimientos. El manual detalla cómo respaldar SQLite con cifrado y comprobar la integridad de una restauración en una ruta nueva.
 
 ## Pruebas y evidencia
+
+Consulta la [matriz de aceptación](Evidencias/aceptacion.md), el [diccionario SQLite](Evidencias/diccionario-sqlite.md) y la [matriz normativa](Evidencias/cumplimiento.md).
 
 Ejecuta `npm test` desde `Proyecto` para reproducir las pruebas de integración. El conjunto comprueba, entre otros casos, que dos compradores no puedan adquirir la misma última unidad, que una repetición no duplique un pedido, que cada cuenta vea sus propios folios y que se pueda restaurar la base. Incluye una prueba de persistencia con la interfaz REST de Realtime Database y control de versiones. [Evidencia de la entrega académica](Evidencias)
 

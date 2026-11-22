@@ -29,6 +29,7 @@ test('La migración conserva usuarios e inventario de la versión anterior',t=>{
   const upgraded=openDatabase(path);
   try {
     assert.equal(upgraded.prepare('SELECT avatar FROM users WHERE id=1').get().avatar,'memo');
+    assert.equal(upgraded.prepare('SELECT avatar_image FROM users WHERE id=1').get().avatar_image,null);
     assert.deepEqual(upgraded.prepare(`SELECT p.sku,c.name,p.stock,p.image FROM products p
       JOIN categories c ON c.id=p.category_id ORDER BY p.sku`).all().map(row=>[row.sku,row.name,row.stock,row.image]),[
       ['MG-017','Juegos',7,'/games/gta6.jpg'],
@@ -140,6 +141,21 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     await buyer('POST','/payments/'+order.id+'/confirm',{outcome:'approve'});
     assert.equal(qty(1),after);
     assert.equal(db.prepare("SELECT delta FROM inventory_movements WHERE reason='sale' AND order_id=?").get(order.id).delta,-1);
+  });
+  await t.test('E11 conserva la foto de perfil después de volver a iniciar sesión', async () => {
+    const portrait = 'data:image/jpeg;base64,' + Buffer.from([255, 216, 0, 255, 217]).toString('base64');
+    await buyerTwo('PATCH', '/profile', {name: 'Otra compradora', avatar: 'data:image/svg+xml;base64,AAAA'}, 400);
+    await buyerTwo('PATCH', '/profile', {name: 'Otra compradora', avatar: 'data:image/jpeg;base64,AAAA'}, 400);
+    assert.equal((await buyerTwo('PATCH', '/profile', {name: 'Otra compradora', avatar: portrait})).avatar, portrait);
+    await buyerTwo('POST', '/auth/logout', {});
+    await buyerTwo('GET', '/auth/session');
+    const signedIn = await buyerTwo('POST', '/auth/login', {
+      email: 'otra@example.test', password: syntheticPassword,
+    });
+    assert.equal(signedIn.user.avatar, portrait);
+    assert.equal((await buyerTwo('PATCH', '/profile', {name: 'Nombre actualizado'})).avatar, portrait);
+    assert.equal((await buyerTwo('PATCH', '/profile', {name: 'Nombre actualizado', avatar: 'gamer'})).avatar, 'gamer');
+    assert.equal(db.prepare('SELECT avatar_image FROM users WHERE id=?').get(signedIn.user.id).avatar_image, null);
   });
   await t.test('E05 gestión administrativa, transiciones, guía y entrega',async()=>{
     assert.ok((await operator('GET','/admin/orders')).some(o=>o.id===order.id));

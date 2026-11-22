@@ -466,14 +466,22 @@
                   },
                   "avatar": {
                     "type": "string",
-                    "enum": [
-                      "memo",
-                      "cyber",
-                      "gamer",
-                      "neon",
-                      "hacker"
+                    "description": "Avatar del catálogo o foto JPEG normalizada en URI de datos. En PATCH omítelo para conservar la imagen actual.",
+                    "oneOf": [
+                      {
+                        "enum": [
+                          "memo",
+                          "cyber",
+                          "gamer",
+                          "neon",
+                          "hacker"
+                        ]
+                      },
+                      {
+                        "maxLength": 16000,
+                        "pattern": "^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$"
+                      }
                     ],
-                    "description": "Identificador del avatar local.",
                     "example": "neon"
                   }
                 },
@@ -1263,14 +1271,22 @@
                   },
                   "avatar": {
                     "type": "string",
-                    "enum": [
-                      "memo",
-                      "cyber",
-                      "gamer",
-                      "neon",
-                      "hacker"
+                    "description": "Avatar del catálogo o foto JPEG normalizada en URI de datos. En PATCH omítelo para conservar la imagen actual.",
+                    "oneOf": [
+                      {
+                        "enum": [
+                          "memo",
+                          "cyber",
+                          "gamer",
+                          "neon",
+                          "hacker"
+                        ]
+                      },
+                      {
+                        "maxLength": 16000,
+                        "pattern": "^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$"
+                      }
                     ],
-                    "description": "Identificador del avatar local.",
                     "example": "neon"
                   }
                 },

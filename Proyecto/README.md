@@ -10,6 +10,17 @@ Requiere Node.js 24 y npm. Ejecuta los comandos desde `Proyecto`.
 
 ```bash
 npm ci
+npm run demo
+```
+
+Abre http://127.0.0.1:4200. La terminal muestra el usuario y la contraseña
+de administración para esa ejecución. La demostración crea una base de datos
+aislada y llena el catálogo. Si el puerto está ocupado, elige otro con
+`DEMO_PORT` antes de iniciar.
+
+Para conservar una base local entre ejecuciones, usa el arranque habitual.
+
+```bash
 npm start
 ```
 
@@ -69,9 +80,10 @@ npm run build -- --configuration production,spark
 firebase hosting:channel:deploy catalogo --expires 30d --config firebase.spark.json --project manugames-d4df7
 ```
 
-Revisa `firestore.merged.rules` antes de publicarlo. Comprueba que las reglas
-existentes restrinjan las lecturas y escrituras del perfil al propietario. En
-Firestore puedes editar precios, existencias y descripciones por SKU. Los precios
+El preparador verifica con el simulador de reglas que el catálogo sea público
+para lectura y que el perfil sea privado. Revisa `firestore.merged.rules` antes
+de publicarlo. En Firestore puedes editar precios, existencias y descripciones
+por SKU de la vista previa. Los precios
 se guardan en centavos de MXN y las imágenes del catálogo se sirven desde Hosting.
 La compilación lee la configuración web del proyecto con
 `/__/firebase/init.json`.

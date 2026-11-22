@@ -5,7 +5,7 @@ const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, resolve, join } = require('node:path');
 const derive = promisify(scrypt);
 const termsVersion = '2026-11-19';
-const migrations = ['001-initial.sql', '002-terminal.sql'];
+const migrations = [[1, '001-initial.sql'], [2, '002-terminal.sql'], [4, '004-profile-photo.sql']];
 const avatarIds = ['memo', 'cyber', 'gamer', 'neon', 'hacker'];
 
 class Problem extends Error {
@@ -67,8 +67,7 @@ function openDatabase(location = process.env.DB_PATH || join(__dirname, '../data
   transaction(db, () => {
     const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE version=?');
     const record = db.prepare('INSERT INTO schema_migrations(version) VALUES(?)');
-    for (const [index, file] of migrations.entries()) {
-      const version = index + 1;
+    for (const [version, file] of migrations) {
       if (applied.get(version)) continue;
       db.exec(readFileSync(join(__dirname, '../db', file), 'utf8'));
       record.run(version);

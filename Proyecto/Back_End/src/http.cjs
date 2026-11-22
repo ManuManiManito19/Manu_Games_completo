@@ -42,7 +42,8 @@ function createApp(options={}){
   const rates = new Map();
   const routes=[];
   const add=(method, pattern, access, handler)=>routes.push({method,pattern:new RegExp('^'+pattern+'$'),access,handler});
-  const account='SELECT id,name,email,role,avatar,active,created_at FROM users';
+  const account='SELECT id,name,email,role,COALESCE(avatar_image,avatar) avatar,active,created_at FROM users';
+  const avatarColumns = value => value.startsWith('data:') ? ['memo', value] : [value, null];
   const getUser=(db,id)=>db.prepare(account+' WHERE id=? AND active=1').get(id||0)||null;
   function setCookie(headers,value,seconds){
     headers.set('Set-Cookie',`${cookieName}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${seconds}${secure?'; Secure':''}`);
@@ -103,7 +104,8 @@ function createApp(options={}){
     const hash=await passwordHash(passwordOf(c.body.password));
     const id=transaction(db,()=>{
       requireValue(!db.prepare('SELECT id FROM users WHERE email=?').get(email),'Ya existe una cuenta con ese correo.',409);
-      const id=Number(db.prepare('INSERT INTO users(name,email,password_hash,avatar) VALUES(?,?,?,?)').run(name,email,hash,avatar).lastInsertRowid);
+      const id=Number(db.prepare('INSERT INTO users(name,email,password_hash,avatar,avatar_image) VALUES(?,?,?,?,?)')
+        .run(name,email,hash,...avatarColumns(avatar)).lastInsertRowid);
       audit(db,id,'registered','user',id);
       return id;
     });
@@ -144,7 +146,8 @@ function createApp(options={}){
   add('PATCH','/profile','client',c=>{
     const {db}=c;
     const avatar=c.body.avatar===undefined ? c.user.avatar : avatarId(c.body.avatar);
-    db.prepare('UPDATE users SET name=?,avatar=? WHERE id=?').run(field(c.body.name,'nombre',2,90),avatar,c.user.id);
+    db.prepare('UPDATE users SET name=?,avatar=?,avatar_image=? WHERE id=?')
+      .run(field(c.body.name,'nombre',2,90),...avatarColumns(avatar),c.user.id);
     return cleanUser(getUser(db,c.user.id));
   });
   add('GET','/addresses','client',c=>c.db.prepare('SELECT id,recipient,street,city,region,postal_code FROM addresses WHERE user_id=? ORDER BY id').all(c.user.id));
