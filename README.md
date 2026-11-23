@@ -101,4 +101,6 @@ Cada entregable está disponible como **Word editable** y como **PDF**. El manua
 | 12 Ficha técnica y arquitectura | [Word](Documentos/Word/12-Ficha-tecnica-y-arquitectura.docx) | [PDF](Documentos/PDF/12-Ficha-tecnica-y-arquitectura.pdf) |
 | 13 Presentación y demostración | [Word](Documentos/Word/13-Presentacion-y-demostracion.docx) | [PDF](Documentos/PDF/13-Presentacion-y-demostracion.pdf) |
 
+[Descargar la presentación animada en PowerPoint](Documentos/PPTX/13-Presentacion-Manu-Games.pptx)
+
 [Abrir todos los Word](Documentos/Word) · [Abrir todos los PDF](Documentos/PDF) · [Consultar la licencia del proyecto](Proyecto/LICENSE)
