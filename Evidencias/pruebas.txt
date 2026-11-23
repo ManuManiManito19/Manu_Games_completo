@@ -1,20 +1,37 @@
+Manu Games | Integración de la revisión del código
+Commit: 54c95fc7c5d910cfe47018afe7441208b6639b22
+Fecha local: 23 de noviembre de 2026
+Entorno: Windows, Node.js 24.20.0
+Comando desde Proyecto: npm test
+
+> manu-games@1.0.0 test
+> npm run test:store
+
+
+> manu-games@1.0.0 test:store
+> node --test Back_End/test/*.test.cjs
+
+✔ Firebase confirma compras y conserva productos, permisos y existencias (563.7638ms)
+✔ La migración conserva usuarios e inventario de la versión anterior (91.6798ms)
 ▶ Tienda de extremo a extremo con persistencia y autorización
-  ✔ E01 catálogo paginado, filtros y ficha con variantes (48.176322ms)
-  ✔ E02 carrito persistente, modificación, eliminación y stock insuficiente (14.336484ms)
-  ✔ E03 registro con hash, rotación, entrada especial y control por rol/CSRF (2312.75507ms)
-  ✔ E04 precio en servidor, cupón, términos, folio e idempotencia (16.890064ms)
-  ✔ E05 gestión administrativa, transiciones, guía y entrega (12.216507ms)
-  ✔ E06 devolución, información adicional y reembolso sin doble reposición (10.749962ms)
-  ✔ E07 dos compradores disputan la última unidad y la transacción rechaza al segundo (18.615953ms)
-  ✔ E08 garantía con reposición, pago rechazado e inventario intacto (15.809149ms)
-  ✔ E09 políticas, recuperación genérica, cierre de sesión y caducidad (434.575709ms)
-  ✔ E10 integridad referencial y respaldo cifrado con restauración (5.176243ms)
-✔ Tienda de extremo a extremo con persistencia y autorización (2912.840973ms)
-ℹ tests 11
+  ✔ E01 catálogo paginado, filtros y ficha con variantes (255.4488ms)
+  ✔ E02 carrito persistente, modificación, eliminación y stock insuficiente (79.002ms)
+  ✔ E03 registro con hash, rotación, entrada especial y control por rol/CSRF (1288.6327ms)
+  ✔ Comentarios del perfil y solicitudes de privacidad independientes (126.2496ms)
+  ✔ E04 precio en servidor, cupón, método de pago, folio e idempotencia (125.2243ms)
+  ✔ E11 conserva la foto de perfil después de volver a iniciar sesión (374.6659ms)
+  ✔ E05 gestión administrativa, transiciones, guía y entrega (62.25ms)
+  ✔ E06 devolución, información adicional y reembolso sin doble reposición (124.4678ms)
+  ✔ E07 dos compradores disputan la última unidad y la transacción rechaza al segundo (173.0361ms)
+  ✔ E08 garantía con reposición, pago rechazado e inventario intacto (156.4695ms)
+  ✔ E09 políticas, recuperación genérica, cierre de sesión y caducidad (360.2869ms)
+  ✔ E10 integridad referencial y respaldo cifrado con restauración (26.2526ms)
+✔ Tienda de extremo a extremo con persistencia y autorización (3178.7165ms)
+ℹ tests 15
 ℹ suites 0
-ℹ pass 11
+ℹ pass 15
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 3030.075841
+ℹ duration_ms 3383.2442

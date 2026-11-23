@@ -11,7 +11,7 @@ Proyecto integrador de **Temas Selectos de Tecnología de la Información**, Uni
 | Perfil | Funciones disponibles |
 | --- | --- |
 | Visitante | Explorar el catálogo, buscar por nombre o inicial, aplicar filtros, comparar variantes y preparar el carrito. |
-| Comprador | Crear una cuenta, registrar un domicilio de prueba, cotizar, aplicar un cupón, aceptar los términos y completar un pago simulado. |
+| Comprador | Crear una cuenta, registrar un domicilio de prueba, aceptar los términos al registrarse, cotizar, aplicar un cupón y completar un pago simulado. |
 | Operador | Consultar reportes, administrar productos y categorías, registrar ajustes de inventario, avanzar pedidos, gestionar promociones y resolver solicitudes. |
 
 El catálogo de demostración incluye **27 referencias**: **14 juegos**, **3 DLCs** y **10 complementos**. Los complementos incluyen monedas, puntos y suscripciones. Cada ficha muestra el SKU, la plataforma, el precio y la disponibilidad. La búsqueda del encabezado funciona con Enter desde cualquier pantalla. Puedes combinar categoría, precio, existencia y orden de resultados. Los productos que comparten una familia aparecen como variantes con precios y existencias propios.
@@ -23,7 +23,7 @@ La tienda usa el estilo de terminal negra con neón verde del proyecto original.
 1. Busca **Gears 5: Hivebusters**, DLC con SKU `MG-036`. La ficha indica que requiere el juego base Gears 5.
 2. Agrega dos unidades al carrito. Continúa a checkout y registra o inicia sesión con una cuenta de prueba. El carrito se conserva al cambiar de sesión.
 3. Registra un domicilio ficticio y aplica el cupón `DEMO10`. Con el catálogo inicial, el subtotal es **698.00 MXN**, el descuento es **69.80 MXN** y el total es **628.20 MXN**.
-4. Revisa el desglose, acepta los términos y crea el pedido. El pedido obtiene un folio y queda pendiente hasta que eliges el resultado del simulador.
+4. Elige Tarjeta o PayPal con datos ficticios, revisa el desglose y confirma el pedido. El pedido obtiene un folio y queda pendiente hasta que eliges el resultado del simulador.
 5. Aprueba el pago de prueba y comprueba el resultado en **Mi cuenta → Mis productos**. En una sesión distinta, entra con la cuenta administrativa y avanza el pedido por **En preparación**, **Enviado** y **Entregado**.
 6. Vuelve a la cuenta compradora para consultar la guía y el código de entrega. Abre una solicitud de devolución y registra su resolución desde el panel para observar el efecto sobre pago e inventario.
 
@@ -31,7 +31,7 @@ Es un entorno académico con **pagos, guías y códigos digitales simulados**. L
 
 ## Catálogo publicado en Firebase
 
-[Abrir Manu Games en Firebase Hosting](https://manugames-d4df7.web.app). El sitio incluye las 27 fichas activas de Firestore, filtros, registro, inicio de sesión, perfil con foto y aviso de privacidad con derechos ARCO. La demostración local incluye además el carrito, los pagos de prueba, el inventario y la operación administrativa.
+[Abrir Manu Games en Firebase Hosting](https://manugames-d4df7.web.app). El sitio incluye las 27 fichas activas de Firestore, filtros, cuentas con foto, carrito, checkout simulado con Tarjeta o PayPal e historial privado. El menú ofrece comentarios públicos, devoluciones asociadas al pedido y un formulario privado de derechos ARCO. La demostración local incluye el simulador de aprobación y rechazo de pagos, los movimientos transaccionales de inventario y la operación administrativa.
 
 ## Cómo ejecutarlo en tu equipo
 
@@ -73,13 +73,13 @@ En `Back_End/.env`, proporciona un correo ficticio distinto al del comprador en 
 
 El servidor calcula los importes en centavos y vuelve a comprobar precio, disponibilidad y cupón al aprobar el pago. El pedido conserva el precio, la descripción y el domicilio aceptados, incluso si esos datos se editan más adelante. La API reconoce los reintentos con la misma clave de solicitud y usa transacciones para registrar cambios de pago e inventario. El acceso a pedidos y operaciones administrativas se valida en el servidor.
 
-El [contrato OpenAPI](Proyecto/Back_End/openapi.json) reúne **48 operaciones** de catálogo, cuenta, carrito, pedidos, pagos, solicitudes y administración. Las [consultas de reporte](Proyecto/Back_End/db/reportes.sql) permiten revisar ventas aprobadas, existencias, solicitudes y movimientos. El manual detalla cómo respaldar SQLite con cifrado y comprobar la integridad de una restauración en una ruta nueva.
+El [contrato OpenAPI](Proyecto/Back_End/openapi.json) reúne **50 operaciones** de catálogo, cuenta, carrito, pedidos, pagos, comentarios, solicitudes y administración. Las [consultas de reporte](Proyecto/Back_End/db/reportes.sql) permiten revisar ventas aprobadas, existencias, solicitudes y movimientos. El manual detalla cómo respaldar SQLite con cifrado y comprobar la integridad de una restauración en una ruta nueva.
 
 ## Pruebas y evidencia
 
-Consulta la [matriz de aceptación](Evidencias/aceptacion.md), el [diccionario SQLite](Evidencias/diccionario-sqlite.md) y la [matriz normativa](Evidencias/cumplimiento.md).
+La [matriz de aceptación](Evidencias/aceptacion.md) enlaza los cambios de catálogo, checkout, registro, comentarios, devoluciones y derechos ARCO con sus commits y pruebas. Incluye el alcance del sitio publicado y el del panel local.
 
-Ejecuta `npm test` desde `Proyecto` para reproducir las pruebas de integración. El conjunto comprueba, entre otros casos, que dos compradores no puedan adquirir la misma última unidad, que una repetición no duplique un pedido, que cada cuenta vea sus propios folios y que se pueda restaurar la base. Incluye una prueba de persistencia con la interfaz REST de Realtime Database y control de versiones. [Evidencia de la entrega académica](Evidencias)
+Ejecuta `npm test` desde `Proyecto`. La ejecución sobre `54c95fc` completó **15 pruebas aprobadas, 0 fallidas** con Node 24.20.0. [Registro de integración](Evidencias/pruebas.txt) · [Resultado histórico de navegación](Evidencias/navegadores.json) · [Diccionario SQLite](Evidencias/diccionario-sqlite.md) · [Matriz normativa](Evidencias/cumplimiento.md)
 
 ## Documentos del proyecto
 

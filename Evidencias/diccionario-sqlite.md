@@ -223,3 +223,16 @@ La tienda guarda una fila por pedido, por pago y por envío. Las partidas respal
 La vista `sales_report` presenta ventas aprobadas para agregación. Los reportes cruzan movimientos y existencia. Ejecuta `npm run db:backup -- ruta.mgbackup` y restaura a una ruta nueva con `npm run db:restore -- ruta.mgbackup`. El manual técnico describe `BACKUP_KEY` y `DB_PATH`.
 
 Fuentes del esquema [migraciones y semilla](../Proyecto/Back_End/db) y [consultas](../Proyecto/Back_End/db/reportes.sql).
+
+## Comentarios públicos y método de pago
+
+La migración [007-comments.sql](../Proyecto/Back_End/db/007-comments.sql) crea la tabla `community_comments` en modo estricto.
+
+| Campo | Tipo | Uso |
+| --- | --- | --- |
+| `id` | INTEGER PRIMARY KEY | Identificador interno del comentario. |
+| `author` | TEXT NOT NULL | Nombre de perfil registrado en el momento de publicar. |
+| `body` | TEXT NOT NULL | Texto público. La API valida de 5 a 450 caracteres y exige confirmación de publicación. |
+| `created_at` | TEXT NOT NULL | Marca temporal con valor inicial `CURRENT_TIMESTAMP`. |
+
+[009-payment-method.sql](../Proyecto/Back_End/db/009-payment-method.sql) agrega `payments.method` como texto con restricción a `card` o `paypal`. El campo es anulable para pagos históricos y los pedidos nuevos registran el método seleccionado. La API conserva los campos históricos de términos del pedido, y la aceptación vigente pertenece al flujo de registro.
