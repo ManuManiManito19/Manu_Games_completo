@@ -3100,6 +3100,7 @@
                 "requestKey": "a4c59987-f12e-4f78-b06d-c7d46c60b19e",
                 "addressId": 1,
                 "method": "digital",
+                "paymentMethod": "card",
                 "quotedTotal": 31410,
                 "accepted": true,
                 "termsVersion": "2026-11-19",
@@ -3132,6 +3133,10 @@
                       31410
                     ]
                   },
+                  "paymentMethod": {
+                    "enum": ["card", "paypal"],
+                    "description": "Método simulado. El cliente valida los datos de prueba y envía únicamente esta selección."
+                  },
                   "accepted": {
                     "type": "boolean",
                     "examples": [
@@ -3155,6 +3160,7 @@
                   "requestKey",
                   "addressId",
                   "method",
+                  "paymentMethod",
                   "quotedTotal",
                   "accepted",
                   "termsVersion"

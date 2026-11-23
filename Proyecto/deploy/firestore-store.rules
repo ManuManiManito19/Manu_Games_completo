@@ -69,7 +69,8 @@
       allow get, list: if ownsAccount(uid);
       allow create: if ownsAccount(uid)
         && isUuid(id)
-        && request.resource.data.keys().hasOnly(['folio','status','items','skus','terms_version','subtotal','discount','total','created_at'])
+        && request.resource.data.keys().hasOnly(['folio','status','items','skus','terms_version','payment_method','subtotal','discount','total','created_at'])
+        && request.resource.data.get('payment_method', 'card') in ['card','paypal']
         && request.resource.data.status == 'paid'
         && request.resource.data.terms_version == '2026-11-19'
         && request.resource.data.created_at == request.time

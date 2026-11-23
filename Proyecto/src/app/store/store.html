@@ -113,7 +113,8 @@
     @if(!user){<p>Inicia sesión o registra una cuenta de prueba para continuar.</p><ng-container [ngTemplateOutlet]="auth"></ng-container>}
     @else if(payment){
       <div class="panel"><h2>Simulador de pago</h2><p>Folio {{payment.folio}} · {{format(payment.total)}}</p>
-        <p>Elige el resultado del simulador. La demostración no solicita datos bancarios.</p>
+        @if(payment.payment_method){<p>Método de prueba · {{paymentLabels[payment.payment_method]}}</p>}
+        <p>Elige el resultado del simulador.</p>
         <div class="actions"><button class="primary" [disabled]="busy" (click)="pay(payment.id,'approve')">Aprobar pago de prueba</button><button [disabled]="busy" (click)="pay(payment.id,'decline')">Rechazar pago de prueba</button></div>
       </div>
     }
@@ -125,10 +126,31 @@
           @if(addresses.length===0){<p>Registra una dirección para continuar.</p>}
           <details [open]="addresses.length===0"><summary>Agregar dirección</summary><ng-container [ngTemplateOutlet]="addressForm"></ng-container></details>}
           @if(quote && (preview || addresses.length)){
-          @if(preview){<h2>Compra digital de prueba</h2><p>El pedido se guardará en tu cuenta. No se solicitarán datos bancarios.</p>}
+          @if(preview){<h2>Compra digital de prueba</h2><p>El pedido se guardará en tu cuenta.</p>}
           <form (submit)="reviewPurchase($event,purchaseDialog)" class="stack">
             @if(!preview){<label>Dirección de la cuenta<select name="addressId" required>@for(a of addresses;track a.id){<option [value]="a.id" [selected]="a.id===addressId">{{a.recipient}} · {{a.street}}, {{a.city}}, {{a.postal_code}}</option>}</select></label>}
-            <label class="check"><input type="checkbox" name="accepted" required> Acepto los términos de la versión {{termsVersion}}.</label>
+            <fieldset class="payment-fields stack">
+              <legend>Opciones de pago</legend>
+              <p>Pago simulado. Usa datos de prueba.</p>
+              <label>Método de pago
+                <select #paymentSelect name="paymentMethod" [value]="paymentMethod" (change)="choosePayment(paymentSelect.value)" required>
+                  <option value="">Selecciona un método</option><option value="card">Tarjeta</option><option value="paypal">PayPal</option>
+                </select>
+              </label>
+              @if(paymentMethod==='card'){
+                <p id="card-demo">Usa 4242 4242 4242 4242 y el código 123.</p>
+                <label>Titular de prueba<input name="cardholder" autocomplete="off" minlength="2" maxlength="90" required></label>
+                <label>Número de tarjeta de prueba<input name="cardNumber" inputmode="numeric" autocomplete="off" pattern="(4242 ?){3}4242" maxlength="19" aria-describedby="card-demo" required></label>
+                <label>Vencimiento<input name="cardExpiry" type="month" placeholder="AAAA-MM" [attr.min]="firstCardMonth" aria-describedby="expiry-hint" required></label>
+                <small id="expiry-hint">Desde 2026 y con al menos 30 días de vigencia.</small>
+                <label>Código de seguridad de prueba<input name="cardCode" type="password" autocomplete="off" inputmode="numeric" pattern="123" maxlength="3" aria-describedby="card-demo" required></label>
+              }
+              @if(paymentMethod==='paypal'){
+                <label>Correo electrónico de PayPal<input name="paypalEmail" type="email" autocomplete="off" maxlength="180" pattern=".+@.+[.].+" placeholder="jugador&#64;example.com" required></label>
+              }
+            </fieldset>
+            <label class="check"><input type="checkbox" name="accepted" [checked]="termsAccepted.checkout" (click)="toggleTerms($event,'checkout',termsDialog)" required> Acepto los términos de la versión {{termsVersion}}.</label>
+            <button class="terms-trigger" type="button" aria-haspopup="dialog" (click)="showTerms('checkout',termsDialog)">Leer términos y condiciones</button>
             <button class="primary" [disabled]="busy">Confirmar pedido</button>
           </form>
           }
@@ -146,6 +168,25 @@
     } @else {<p>Agrega productos antes de confirmar.</p><a href="#catalogo">Ir al catálogo</a>}
   }
 
+  <dialog #termsDialog class="panel purchase-dialog terms-dialog" aria-labelledby="terms-title">
+    <h2 id="terms-title" tabindex="-1" autofocus>Términos y condiciones</h2>
+    <p>Versión {{termsVersion||'2026-11-19'}}.</p>
+    <p>Manu Games es una tienda académica. Los precios se muestran en pesos mexicanos y los pedidos, pagos y licencias son de prueba.</p>
+    @if(termsContext==='checkout'){
+      <p>Revisa el juego, la plataforma, las cantidades, el precio y el descuento antes de confirmar. Si cambia el precio o la disponibilidad, revisa nuevamente el pedido.</p>
+      <p>Usa la tarjeta de prueba indicada o un correo de prueba para PayPal. Solo se registra el método de pago elegido. La simulación no realiza cobros.</p>
+      <p>Puedes consultar el pedido en Mi cuenta y abrir una solicitud desde Devoluciones.</p>
+    } @else {
+      <p>Usa datos ficticios en tu cuenta. Tu perfil y tus pedidos se guardan para darte acceso a la tienda y atender tus solicitudes. Si publicas un comentario, se muestra junto al nombre de perfil que confirmes.</p>
+      <p>Consulta o solicita acceso, rectificación, cancelación u oposición de tus datos desde Derechos ARCO.</p>
+      <details><summary>Leer el aviso de privacidad</summary><ng-container [ngTemplateOutlet]="privacyNotice"></ng-container></details>
+    }
+    <div class="actions">
+      <button type="button" (click)="termsDialog.close()">Cerrar</button>
+      <button type="button" class="primary" (click)="acceptTerms(termsDialog)">Aceptar términos</button>
+    </div>
+  </dialog>
+
   <dialog #purchaseDialog class="panel purchase-dialog" aria-labelledby="purchase-title">
     <h2 id="purchase-title">¿Son estos los productos que quieres comprar?</h2>
     <p>Revisa la plataforma y la cantidad antes de continuar.</p>
@@ -154,6 +195,7 @@
         <li><strong>{{item.name}}</strong> · {{item.platform}} · {{item.quantity}} unidad(es)</li>
       }</ul>
       <p>Total <strong>{{format(q.total)}}</strong></p>
+      @if(paymentMethod){<p>Método de prueba · {{paymentLabels[paymentMethod]}}</p>}
     }
     <div class="actions">
       <button type="button" autofocus (click)="purchaseDialog.close()">Volver a revisar</button>
@@ -256,7 +298,6 @@
                 </select></label>
                 <label>Partida<select name="productId"><option value="">Pedido completo</option>@for(item of o.items;track item.product_id){<option [value]="item.product_id">{{item.name}}</option>}</select></label>
                 <label>Motivo<textarea name="reason" minlength="5" maxlength="450" required></textarea></label>
-                <label>Referencia de evidencia opcional<input name="evidence" maxlength="450" placeholder="Por ejemplo, nombre del comprobante"></label>
                 <button class="primary" [disabled]="busy">Enviar solicitud</button>
               </form>
             }
@@ -294,6 +335,7 @@
     @if(!user){<p>Inicia sesión para consultar el historial.</p><a href="#cuenta">Ir a mi cuenta</a>}
     @else if(order; as o){
       <section class="panel"><h2>{{o.folio}} · {{estado(o.status)}}</h2><p>{{o.created_at}} UTC · Pago {{estado(o.payment_status)}} · {{o.reference}}</p>
+        @if(o.payment_method){<p>Método de prueba · {{paymentLabels[o.payment_method]}}</p>}
         @if(o.tracking){<p>Guía digital {{o.tracking}}</p>}
         @if(o.delivery_code){<p>Código de entrega de prueba <strong>{{o.delivery_code}}</strong></p>}
         <ul>@for(item of o.items;track item.product_id){<li>{{item.sku}} · {{item.name}} × {{item.quantity}} · {{format(item.unit_price)}} por unidad</li>}</ul>
@@ -325,13 +367,13 @@
       <h2>Entrega digital</h2>
       <p>Cobertura de demostración en México, con entrega para la plataforma indicada en la ficha. El costo de envío es de $0 MXN. La administración prepara el pedido y registra la referencia digital. Al marcarlo Entregado, la licencia simulada aparece en Mi cuenta. El objetivo para la demostración es liberarla en la misma sesión. Si falta la licencia, resulta incompatible o llega duplicada, abre una solicitud desde el pedido.</p>
       <h2>Cancelaciones y devoluciones</h2>
-      <p>En Devoluciones, selecciona el pedido, el tipo de solicitud y, cuando aplique, la partida afectada. Describe la incidencia y agrega una referencia de prueba sin incluir credenciales ni datos de pago. El folio y el acuse aparecen en el historial de Devoluciones y la primera respuesta tiene como objetivo un día hábil.</p>
+      <p>En Devoluciones, selecciona el pedido, el tipo de solicitud y, cuando aplique, la partida afectada. Describe la incidencia sin incluir credenciales ni datos de pago. El folio y el acuse aparecen en el historial de Devoluciones y la primera respuesta tiene como objetivo un día hábil.</p>
       <p>Un pedido pendiente puede cancelarse antes de aprobar el pago. Para un pedido pagado, el operador revisa el estado y el motivo, incluidas la entrega faltante, la plataforma incorrecta, la licencia defectuosa o una solicitud de revocación cuando corresponda. Puede pedir una aclaración, aprobar la solicitud o explicar el rechazo. Puedes responder en el folio cuando se solicite información adicional.</p>
       <p>Si procede, el simulador registra un reembolso del pedido completo y repone las unidades. El resultado se refleja en el pedido al quedar resuelto. La entrega es digital, por lo que el ejercicio prescinde de envíos físicos de retorno. Los plazos de atención de la demostración respetan los derechos aplicables.</p>
       <h2>Garantías y reposiciones</h2>
       <p>El operador académico atiende incidencias de licencias erróneas, duplicadas o sin entrega en el formulario del pedido. Revisa el folio, la versión y plataforma, y registra la resolución. Si aprueba una reposición, la nueva referencia aparece en el historial. Para una garantía comercial real, se debe informar su duración, alcance, exclusiones válidas, responsable y procedimiento en la ficha y en la póliza aplicable.</p>
       <h2>Pago simulado y comprobante</h2>
-      <p>El simulador registra la aprobación o el rechazo sin pedir datos de tarjeta. Consulta el folio y el comprobante interno en el pedido. Para una emisión fiscal real, el proceso requeriría un canal autorizado y los datos fiscales aplicables. Esta demostración emite un comprobante académico.</p>
+      <p>Elige Tarjeta o PayPal con datos de prueba. El simulador registra el método seleccionado y el resultado. Consulta el folio y el comprobante académico en el pedido.</p>
       <h2>Preguntas frecuentes</h2><p>¿Dónde está el folio? En Mi cuenta, sección Mis pedidos. ¿Cómo se consulta un reembolso? En Devoluciones. ¿Se genera un cobro? Las operaciones son simuladas. ¿Cómo aplico el descuento? Introduce DEMO10 en el resumen antes de confirmar.</p>
     </article>
     }
@@ -396,8 +438,8 @@
         @if(authMode==='register'){
           <label>Confirmar contraseña<input name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
           <p class="muted">Usa una contraseña de al menos 12 caracteres y datos ficticios.</p>
-          <a href="#ayuda">Lee el aviso y los términos de prueba</a>
-          <label class="check"><input name="accepted" type="checkbox" required> Acepto los términos y consulté el aviso de privacidad.</label>
+          <label class="check"><input name="accepted" type="checkbox" [checked]="termsAccepted.register" (click)="toggleTerms($event,'register',termsDialog)" required> Acepto los términos y consulté el aviso de privacidad.</label>
+          <button class="terms-trigger" type="button" aria-haspopup="dialog" (click)="showTerms('register',termsDialog)">Leer términos y condiciones</button>
         }
         <button class="primary" [disabled]="busy">{{authMode==='register'?'Crear cuenta':authMode==='recovery'?'Solicitar recuperación':'Iniciar sesión'}}</button>
       </form>

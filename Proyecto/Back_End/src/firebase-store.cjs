@@ -94,11 +94,11 @@ function firebaseStore(value, options={}){
     const db=openDatabase(':memory:');
     try {
       if(state!==null)hydrate(db,state);
-      const upgrade = state !== null && [5, 6, 7, 8].some(version => !state.schema_migrations[version]);
+      const upgrade = state !== null && [5, 6, 7, 8, 9].some(version => !state.schema_migrations[version]);
       const persist = write || upgrade;
       const current=persist&&state!==null?snapshot(db):null;
       if (upgrade) {
-        db.prepare('INSERT OR IGNORE INTO schema_migrations(version) VALUES(7)').run();
+        db.prepare('INSERT OR IGNORE INTO schema_migrations(version) VALUES(7),(9)').run();
         seedCatalog(db);
       }
       const result=await action(db);

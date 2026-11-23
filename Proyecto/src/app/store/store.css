@@ -2,3 +2,8 @@
 .purchase-dialog {width:min(38rem,calc(100% - 2rem));max-height:calc(100% - 2rem);margin:auto;color:inherit;}
 .purchase-dialog::backdrop {background:#000b;}
 .comment-body {white-space:pre-wrap;overflow-wrap:anywhere;}
+.payment-fields {min-width:0;padding:.85rem;border:1px solid var(--border);}
+.payment-fields legend {padding:0 .35rem;font-weight:700;}
+.terms-dialog {width:min(32rem,calc(100% - 2rem));max-height:min(36rem,calc(100% - 2rem));overflow-y:auto;}
+.terms-dialog p {margin-block:.7rem;}
+.terms-trigger {justify-self:start;text-decoration:underline;}

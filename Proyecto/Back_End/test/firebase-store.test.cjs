@@ -42,7 +42,7 @@ test('Firebase confirma compras y conserva productos, permisos y existencias',as
   assert.equal(auth.user.avatar,'gamer');
   const address=await call('POST','/addresses',{recipient:'Comprador de prueba',street:'Avenida Simulada 101',city:'Nuevo Laredo',region:'Tamaulipas',postal_code:'88000'},201);
   const quote=await call('POST','/quote',{coupon:'DEMO10'});
-  const order=await call('POST','/orders',{requestKey:'prueba-firebase-00001',addressId:address.id,method:'digital',coupon:'DEMO10',quotedTotal:quote.total,termsVersion:auth.termsVersion,accepted:true},201);
+  const order=await call('POST','/orders',{requestKey:'prueba-firebase-00001',addressId:address.id,method:'digital',paymentMethod:'card',coupon:'DEMO10',quotedTotal:quote.total,termsVersion:auth.termsVersion,accepted:true},201);
   assert.deepEqual(await call('GET','/library'),[]);
   await call('POST','/payments/'+order.id+'/confirm',{outcome:'approve'});
   assert.equal(remote.orders[order.id].status,'paid');

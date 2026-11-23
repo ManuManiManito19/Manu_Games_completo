@@ -1,8 +1,11 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
-import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, PurchasedProduct, Quote, StoreComment, SupportCase, User, labels, mx, values } from './api';
+import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, PaymentMethod, Product, PurchasedProduct, Quote, StoreComment, SupportCase, User, labels, mx, paymentLabels, values } from './api';
 import { Manager } from './manager';
 import { encodeAvatar, isUploadedAvatar } from './avatar';
+import { minimumCardMonth, validateDemoPayment } from './checkout-payment';
+
+type TermsContext = 'checkout' | 'register';
 
 @Component({
   selector:'app-store', imports:[Manager,NgTemplateOutlet], templateUrl:'./store.html', styleUrl:'./store.css'
@@ -30,6 +33,10 @@ export class Store implements OnInit {
   selectedTermsVersion='';
   requestKey='';
   pendingAddressId=0;
+  paymentMethod:PaymentMethod|''='';
+  readonly paymentLabels=paymentLabels;
+  readonly termsAccepted:Record<TermsContext,boolean>={checkout:false,register:false};
+  termsContext:TermsContext='checkout';
   termsVersion='';
   labels=labels;
   readonly avatars=[
@@ -43,6 +50,7 @@ export class Store implements OnInit {
   get filtered(){return Object.values(this.filters).some(Boolean);}
   get showPrevious(){return this.catalog.page>1;}
   get showNext(){return this.catalog.page*this.catalog.pageSize<this.catalog.total;}
+  get firstCardMonth(){return minimumCardMonth();}
   get commercialCases(){return this.cases.filter(ticket=>['cancel','return','warranty'].includes(ticket.kind));}
   get privacyCases(){return this.cases.filter(ticket=>ticket.kind==='privacy');}
   get supportCases(){return this.cases.filter(ticket=>ticket.kind==='support');}
@@ -105,6 +113,8 @@ export class Store implements OnInit {
     if(this.view==='checkout'&&this.user){
       this.addresses=this.preview?[]:await this.api.call<Address[]>('/addresses');
       this.addressId=this.addresses[0]?.id||0;
+      this.paymentMethod='';
+      this.termsAccepted.checkout=false;
       this.payment=undefined;
       this.quote=undefined;
       if(this.cartCount) await this.refreshQuote();
@@ -178,7 +188,8 @@ export class Store implements OnInit {
       }
       delete data['confirmPassword'];
       if (this.authMode === 'register') await this.readAvatar(event, data);
-      const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:data['accepted']==='on'});
+      const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:this.termsAccepted.register});
+      this.termsAccepted.register=false;
       this.user=s.user;
       this.termsVersion=s.termsVersion;
       this.cart=await this.api.call<Cart>('/cart');
@@ -244,19 +255,45 @@ export class Store implements OnInit {
     this.coupon=values(event)['coupon']||'';
     return this.run(()=>this.refreshQuote());
   }
+  choosePayment(value:string){
+    this.paymentMethod=value==='card'||value==='paypal'?value:'';
+    this.error='';
+  }
+  showTerms(context:TermsContext,dialog:HTMLDialogElement){
+    this.termsContext=context;
+    dialog.showModal();
+  }
+  toggleTerms(event:MouseEvent,context:TermsContext,dialog:HTMLDialogElement){
+    if(this.termsAccepted[context]){
+      this.termsAccepted[context]=false;
+      return;
+    }
+    event.preventDefault();
+    this.showTerms(context,dialog);
+  }
+  acceptTerms(dialog:HTMLDialogElement){
+    this.termsAccepted[this.termsContext]=true;
+    dialog.close();
+  }
   reviewPurchase(event:Event, dialog:HTMLDialogElement){
     const data=values(event);
-    if(!this.quote||data['accepted']!=='on')return;
+    if(!this.quote||!this.termsAccepted.checkout)return;
+    try{this.paymentMethod=validateDemoPayment(data);}
+    catch(error){
+      this.error=error instanceof Error?error.message:'Revisa los datos de pago de prueba.';
+      return;
+    }
+    this.error='';
     this.pendingAddressId=Number(data['addressId']||0);
     dialog.showModal();
   }
   place(dialog:HTMLDialogElement){
     dialog.close();
     return this.run(async()=>{
-      if(!this.quote)return;
+      if(!this.quote||!this.paymentMethod||!this.termsAccepted.checkout)return;
       // El identificador de la cotización se mantiene durante los reintentos.
       this.payment=await this.api.call<Order>('/orders','POST',{
-        addressId:this.pendingAddressId,method:'digital',coupon:this.coupon,
+        addressId:this.pendingAddressId,method:'digital',paymentMethod:this.paymentMethod,coupon:this.coupon,
         quotedTotal:this.quote.total,accepted:true,termsVersion:this.selectedTermsVersion,requestKey:this.requestKey
       });
       if(this.preview){

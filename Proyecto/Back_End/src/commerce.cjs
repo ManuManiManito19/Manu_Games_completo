@@ -143,7 +143,7 @@ function quote(db, sessionId, input) {
 }
 
 function orderDetail(db, id, user) {
-  const order=db.prepare(`SELECT o.*,p.status payment_status,p.reference,s.status delivery_status,s.method,s.tracking
+  const order=db.prepare(`SELECT o.*,p.status payment_status,p.method payment_method,p.reference,s.status delivery_status,s.method,s.tracking
     FROM orders o JOIN payments p ON p.order_id=o.id JOIN shipments s ON s.order_id=o.id WHERE o.id=?`).get(id);
   requireValue(order && (user.role==='admin'||order.user_id===user.id),'Pedido no encontrado.',404);
   const { request_key, address_snapshot, ...visible }=order;
@@ -173,6 +173,7 @@ function createOrder(db, session, input) {
     if(previous) return orderDetail(db,previous.id,session.user);
     requireValue(input.accepted===true && input.termsVersion===termsVersion,'Acepta la versión vigente de los términos.',409);
     requireValue(input.method==='digital','Método de entrega inválido.');
+    requireValue(['card','paypal'].includes(input.paymentMethod),'Selecciona Tarjeta o PayPal.');
     const address=db.prepare('SELECT recipient,street,city,region,postal_code FROM addresses WHERE id=? AND user_id=?')
       .get(integer(input.addressId,'dirección',1,1e9),session.user.id);
     requireValue(address,'Selecciona una dirección de tu cuenta.');
@@ -183,7 +184,8 @@ function createOrder(db, session, input) {
     const id=Number(current.lastInsertRowid);
     for(const item of totals.items) db.prepare('INSERT INTO order_items VALUES(?,?,?,?,?,?,?,?)')
       .run(id,item.id,item.sku,item.name,item.description,item.platform,item.price,item.quantity);
-    db.prepare("INSERT INTO payments(order_id,reference,amount,status) VALUES(?,?,?,'pending')").run(id,'SIM-'+token().slice(0,12),totals.total);
+    db.prepare("INSERT INTO payments(order_id,reference,amount,status,method) VALUES(?,?,?,'pending',?)")
+      .run(id,'SIM-'+token().slice(0,12),totals.total,input.paymentMethod);
     db.prepare("INSERT INTO shipments(order_id,method,status) VALUES(?,'digital','pending')").run(id);
     audit(db,session.user.id,'order_placed','order',id,'Pedido pendiente y términos aceptados');
     return orderDetail(db,id,session.user);

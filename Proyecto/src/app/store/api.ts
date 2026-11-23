@@ -15,11 +15,14 @@ export interface Cart {
 export interface Quote extends Cart { discount: number; shipping: number; tax: number; total: number; delivery: string; }
 export interface Address {id: number; recipient: string; street: string; city: string; region: string; postal_code: string;}
 export interface OrderSummary {id:number|string; folio:string; status:string; total:number; created_at:string;}
+export type PaymentMethod = 'card' | 'paypal';
+export const paymentLabels: Record<PaymentMethod,string> = {card:'Tarjeta',paypal:'PayPal'};
 export interface PurchasedProduct {
   order_id:number; folio:string; status:string; sku:string; name:string; platform:string; quantity:number; license:string|null;
 }
 export interface Order extends OrderSummary {
   user_id: number; subtotal:number; discount:number; shipping:number; tax:number; payment_status:string;
+  payment_method?:PaymentMethod|null;
   reference:string; tracking:string|null; delivery_code:string|null; terms_version:string; consent_at:string;
   items:{ product_id:number; sku:string; name:string; description:string; unit_price:number; quantity:number; platform?:string }[];
   address:Address; history:{detail:string;created_at:string}[];
