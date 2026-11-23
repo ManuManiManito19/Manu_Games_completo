@@ -1,1 +1,4 @@
 :host {display:block;min-height:100vh;}
+.purchase-dialog {width:min(38rem,calc(100% - 2rem));max-height:calc(100% - 2rem);margin:auto;color:inherit;}
+.purchase-dialog::backdrop {background:#000b;}
+.comment-body {white-space:pre-wrap;overflow-wrap:anywhere;}

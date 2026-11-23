@@ -14,20 +14,21 @@ export interface Cart {
 }
 export interface Quote extends Cart { discount: number; shipping: number; tax: number; total: number; delivery: string; }
 export interface Address {id: number; recipient: string; street: string; city: string; region: string; postal_code: string;}
-export interface OrderSummary {id:number; folio:string; status:string; total:number; created_at:string;}
+export interface OrderSummary {id:number|string; folio:string; status:string; total:number; created_at:string;}
 export interface PurchasedProduct {
   order_id:number; folio:string; status:string; sku:string; name:string; platform:string; quantity:number; license:string|null;
 }
 export interface Order extends OrderSummary {
   user_id: number; subtotal:number; discount:number; shipping:number; tax:number; payment_status:string;
   reference:string; tracking:string|null; delivery_code:string|null; terms_version:string; consent_at:string;
-  items:{ product_id:number; sku:string; name:string; description:string; unit_price:number; quantity:number }[];
+  items:{ product_id:number; sku:string; name:string; description:string; unit_price:number; quantity:number; platform?:string }[];
   address:Address; history:{detail:string;created_at:string}[];
 }
 export interface SupportCase {
-  id:number; folio:string; kind:string; status:string; order_id:number|null; reason:string;
+  id:number|string; folio:string; kind:string; status:string; order_id:number|string|null; reason:string;
   evidence:string; resolution:string|null; messages:{body:string;created_at:string}[];
 }
+export interface StoreComment {id:number|string; author:string; body:string; created_at:string;}
 export interface Catalog {items:Product[]; total:number; page:number; pageSize:number;}
 export interface Session {user:User|null; csrf:string; termsVersion:string;}
 @Injectable({providedIn:'root'})

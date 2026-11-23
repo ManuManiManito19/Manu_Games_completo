@@ -466,22 +466,14 @@
                   },
                   "avatar": {
                     "type": "string",
-                    "description": "Avatar del catálogo o foto JPEG normalizada en URI de datos. En PATCH omítelo para conservar la imagen actual.",
-                    "oneOf": [
-                      {
-                        "enum": [
-                          "memo",
-                          "cyber",
-                          "gamer",
-                          "neon",
-                          "hacker"
-                        ]
-                      },
-                      {
-                        "maxLength": 16000,
-                        "pattern": "^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$"
-                      }
+                    "enum": [
+                      "memo",
+                      "cyber",
+                      "gamer",
+                      "neon",
+                      "hacker"
                     ],
+                    "description": "Identificador del avatar local.",
                     "example": "neon"
                   }
                 },
@@ -1271,22 +1263,14 @@
                   },
                   "avatar": {
                     "type": "string",
-                    "description": "Avatar del catálogo o foto JPEG normalizada en URI de datos. En PATCH omítelo para conservar la imagen actual.",
-                    "oneOf": [
-                      {
-                        "enum": [
-                          "memo",
-                          "cyber",
-                          "gamer",
-                          "neon",
-                          "hacker"
-                        ]
-                      },
-                      {
-                        "maxLength": 16000,
-                        "pattern": "^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$"
-                      }
+                    "enum": [
+                      "memo",
+                      "cyber",
+                      "gamer",
+                      "neon",
+                      "hacker"
                     ],
+                    "description": "Identificador del avatar local.",
                     "example": "neon"
                   }
                 },
@@ -3756,6 +3740,60 @@
               }
             }
           }
+        }
+      }
+    },
+    "/comments": {
+      "get": {
+        "operationId": "getComments",
+        "summary": "Consultar los 50 comentarios públicos más recientes",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Comentarios ordenados del más reciente al más antiguo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "author": { "type": "string" },
+                      "body": { "type": "string" },
+                      "created_at": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postComment",
+        "summary": "Publicar un comentario con el nombre del perfil autenticado",
+        "description": "Requiere una sesión iniciada, el encabezado X-CSRF-Token y el consentimiento de publicación.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["body", "publish"],
+                "properties": {
+                  "body": { "type": "string", "minLength": 5, "maxLength": 450 },
+                  "publish": { "const": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Comentario publicado" },
+          "400": { "description": "Comentario inválido o consentimiento ausente" },
+          "401": { "description": "Sesión requerida" },
+          "403": { "description": "Origen o CSRF sin autorización" }
         }
       }
     },

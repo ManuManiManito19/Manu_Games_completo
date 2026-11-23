@@ -65,6 +65,17 @@ function seedCatalog(db) {
       }
       db.prepare('INSERT INTO schema_migrations(version) VALUES(6)').run();
     }
+    if (!db.prepare('SELECT version FROM schema_migrations WHERE version=8').get()) {
+      const revise = db.prepare('UPDATE products SET name=?,description=? WHERE sku=?');
+      for (const number of catalog.availabilityRevisions) {
+        const [, name, , description] = catalog[number - 1];
+        revise.run(name, description, 'MG-' + String(number).padStart(3, '0'));
+      }
+      const exhausted = db.prepare(`SELECT p.id FROM products p JOIN categories c ON c.id=p.category_id
+        WHERE p.active=1 AND c.active=1 AND p.stock=0 AND (c.name='Juegos' OR p.sku='MG-043')`).all();
+      for (const product of exhausted) adjust(db, product.id, 10, 'catalog_restock', null, null);
+      db.prepare('INSERT INTO schema_migrations(version) VALUES(8)').run();
+    }
   });
 }
 

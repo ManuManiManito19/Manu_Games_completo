@@ -83,4 +83,16 @@ function resolveCase(db,user,id,input) {
     return {id,status:input.status};
   });
 }
-module.exports={createCase,caseList,addCaseMessage,resolveCase};
+function listComments(db) {
+  return db.prepare('SELECT id,author,body,created_at FROM community_comments ORDER BY id DESC LIMIT 50').all();
+}
+function postComment(db,user,input) {
+  requireValue(input.publish===true,'Confirma que tu comentario será público.');
+  const body=field(input.body,'comentario',5,450);
+  return transaction(db,()=>{
+    const result=db.prepare('INSERT INTO community_comments(author,body) VALUES(?,?)').run(user.name,body);
+    audit(db,user.id,'comment_posted','community_comment',Number(result.lastInsertRowid));
+    return {ok:true};
+  });
+}
+module.exports={createCase,caseList,addCaseMessage,resolveCase,listComments,postComment};

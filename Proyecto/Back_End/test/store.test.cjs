@@ -41,7 +41,7 @@ test('La migración conserva usuarios e inventario de la versión anterior',t=>{
     seedCatalog(upgraded);
     assert.equal(upgraded.prepare('SELECT COUNT(*) AS count FROM products').get().count,10);
     assert.equal(upgraded.prepare("SELECT stock FROM products WHERE sku='MG-017'").get().stock,7);
-    assert.equal(upgraded.prepare("SELECT stock FROM products WHERE sku='MG-043'").get().stock,0);
+    assert.equal(upgraded.prepare("SELECT stock FROM products WHERE sku='MG-043'").get().stock,10);
     assert.deepEqual(upgraded.prepare('PRAGMA foreign_key_check').all(),[]);
   } finally {
     upgraded.close();
@@ -104,7 +104,7 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     await buyer('GET','/auth/session');
     await buyer('POST','/cart',{productId:36,quantity:2});
     await buyer('PATCH','/cart/36',{quantity:1});
-    await buyer('POST','/cart',{productId:38,quantity:2},409);
+    await buyer('POST','/cart',{productId:38,quantity:11},409);
     await buyer('POST','/cart',{productId:22,quantity:1});
     await buyer('DELETE','/cart/22');
     assert.equal((await buyer('GET','/cart')).items.length,1);
@@ -132,6 +132,22 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     db.prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'admin')").run('Operación','ops@example.test',await passwordHash(syntheticPassword));
     await operator('GET','/auth/session');
     await operator('POST','/auth/login',{email:'ops@example.test',password:syntheticPassword});
+  });
+  await t.test('Comentarios del perfil y solicitudes de privacidad independientes',async()=>{
+    const guest=agent();
+    await guest('GET','/auth/session');
+    await guest('POST','/comments',{body:'Comentario público de prueba.',publish:true},401);
+    await buyer('POST','/comments',{body:'Comentario público de prueba.',publish:false},400);
+    const author=(await buyer('GET','/profile')).name;
+    const privateReason='Solicitud ARCO exclusiva de la cuenta de prueba.';
+    await buyer('POST','/returns',{kind:'privacy',reason:privateReason},201);
+    await buyer('POST','/comments',{body:'Comentario público de prueba.',author:'Otro usuario',publish:true},201);
+    const comments=await guest('GET','/comments');
+    assert.equal(comments.length,1);
+    assert.deepEqual(Object.keys(comments[0]),['id','author','body','created_at']);
+    assert.equal(comments[0].author,author);
+    assert.ok(!(await buyerTwo('GET','/returns')).some(ticket=>ticket.reason===privateReason));
+    assert.ok((await buyer('GET','/returns')).some(ticket=>ticket.reason===privateReason));
   });
   await t.test('E04 precio en servidor, cupón, términos, folio e idempotencia',async()=>{
     const quote=await buyer('POST','/quote',{coupon:'DEMO10',price:1});

@@ -8,13 +8,16 @@
     </form>
     <nav aria-label="Navegación principal">
       <a href="#catalogo" [attr.aria-current]="view==='catalogo'?'page':null">Catálogo</a>
+      <a href="#comentarios" [attr.aria-current]="view==='comentarios'?'page':null">Comentarios</a>
+      <a href="#devoluciones" [attr.aria-current]="view==='devoluciones'?'page':null">Devoluciones</a>
+      <a href="#arco" [attr.aria-current]="view==='arco'?'page':null">Derechos ARCO</a>
       <a href="#ayuda" [attr.aria-current]="view==='ayuda'?'page':null">Ayuda</a>
       <a class="account-link" href="#cuenta" [attr.aria-current]="view==='cuenta'?'page':null">
         @if(user){<img class="profile-avatar" [src]="avatarImage(user.avatar)" width="28" height="28" alt="">}
         {{user ? 'Mi cuenta' : 'Iniciar sesión'}}
       </a>
       @if (user?.role==='admin') { <a href="#admin" [attr.aria-current]="view==='admin'?'page':null">Administración</a> }
-      @if(!preview){<a class="nav-cart" href="#carrito" [attr.aria-label]="'Carrito, '+cartCount+' productos'">Carrito <span>{{cartCount}}</span></a>}
+      <a class="nav-cart" href="#carrito" [attr.aria-label]="'Carrito, '+cartCount+' productos'">Carrito <span>{{cartCount}}</span></a>
     </nav>
   </div>
 </header>
@@ -65,7 +68,7 @@
               <div class="meta">{{p.category}} · {{p.platform}}</div>
               <h3><a [attr.href]="'#producto/'+p.id">{{p.name}}</a></h3>
               <p class="muted">{{p.stock>0?'Disponible · '+p.stock+' unidades':'Agotado'}}</p>
-              <div class="price-row"><strong>{{format(p.price)}}</strong>@if(!preview){<button type="button" [aria-label]="'Agregar '+p.name" [disabled]="busy||!p.stock" (click)="add(p)">Agregar</button>}</div>
+              <div class="price-row"><strong>{{format(p.price)}}</strong><button type="button" [aria-label]="'Agregar '+p.name" [disabled]="busy||!p.stock" (click)="add(p)">Agregar</button></div>
             </div>
           </article>
         } @empty { @if(!busy){<p class="panel">No hay productos con estos filtros.</p>} }
@@ -86,7 +89,7 @@
         <dl><dt>SKU</dt><dd>{{p.sku}}</dd><dt>Disponibilidad</dt><dd>{{p.stock}} unidades</dd><dt>Entrega</dt><dd>Digital sin costo · liberación manual en la demostración</dd><dt>Compatibilidad</dt><dd>{{p.platform}} · licencia de simulación</dd></dl>
         @if(p.variants?.length){<p>Ediciones disponibles</p><ul>@for(variant of p.variants;track variant.id){<li><a [attr.href]="'#producto/'+variant.id">{{variant.name}} · {{variant.platform}}</a></li>}</ul>}
         <p class="price">{{format(p.price)}}</p>
-        @if(!preview){<button class="primary" [disabled]="busy||!p.stock" (click)="add(p)">Agregar al carrito</button>}
+        <button class="primary" [disabled]="busy||!p.stock" (click)="add(p)">Agregar al carrito</button>
       </div>
     </section>
   }
@@ -117,13 +120,14 @@
     @else if(cartCount){
       <div class="split">
         <div class="panel">
-          <h2>Contacto y entrega</h2><p>Contacto de la cuenta · {{user.email}}</p><p>Entrega digital en México. Usa únicamente datos ficticios para la dirección de prueba.</p>
+          @if(!preview){<h2>Contacto y entrega</h2><p>Contacto de la cuenta · {{user.email}}</p><p>Entrega digital en México. Usa únicamente datos ficticios para la dirección de prueba.</p>
           <p><a href="#ayuda">Consulta el aviso de privacidad y las políticas</a>.</p>
           @if(addresses.length===0){<p>Registra una dirección para continuar.</p>}
-          <details [open]="addresses.length===0"><summary>Agregar dirección</summary><ng-container [ngTemplateOutlet]="addressForm"></ng-container></details>
-          @if(quote && addresses.length){
-          <form (submit)="place($event)" class="stack">
-            <label>Dirección de la cuenta<select name="addressId" required>@for(a of addresses;track a.id){<option [value]="a.id" [selected]="a.id===addressId">{{a.recipient}} · {{a.street}}, {{a.city}}, {{a.postal_code}}</option>}</select></label>
+          <details [open]="addresses.length===0"><summary>Agregar dirección</summary><ng-container [ngTemplateOutlet]="addressForm"></ng-container></details>}
+          @if(quote && (preview || addresses.length)){
+          @if(preview){<h2>Compra digital de prueba</h2><p>El pedido se guardará en tu cuenta. No se solicitarán datos bancarios.</p>}
+          <form (submit)="reviewPurchase($event,purchaseDialog)" class="stack">
+            @if(!preview){<label>Dirección de la cuenta<select name="addressId" required>@for(a of addresses;track a.id){<option [value]="a.id" [selected]="a.id===addressId">{{a.recipient}} · {{a.street}}, {{a.city}}, {{a.postal_code}}</option>}</select></label>}
             <label class="check"><input type="checkbox" name="accepted" required> Acepto los términos de la versión {{termsVersion}}.</label>
             <button class="primary" [disabled]="busy">Confirmar pedido</button>
           </form>
@@ -133,7 +137,7 @@
           <h2>Resumen final</h2>
           <form class="inline" (submit)="updateCoupon($event)"><label>Cupón<input name="coupon" [value]="coupon" maxlength="24"></label><button [disabled]="busy">Aplicar cupón</button></form>
           @if(quote; as q){
-            <ul class="clean">@for(item of q.items;track item.id){<li>{{item.name}} × {{item.quantity}}</li>}</ul>
+            <ul class="clean">@for(item of q.items;track item.id){<li>{{item.name}} · {{item.platform}} × {{item.quantity}}</li>}</ul>
             <dl><dt>Subtotal</dt><dd>{{format(q.subtotal)}}</dd><dt>Descuento</dt><dd>{{format(q.discount)}}</dd><dt>Envío</dt><dd>{{format(q.shipping)}}</dd><dt>Impuestos adicionales</dt><dd>{{format(q.tax)}}</dd><dt class="total">Total</dt><dd class="total">{{format(q.total)}}</dd></dl>
             <p>{{q.delivery}}</p>
           }
@@ -141,6 +145,21 @@
       </div>
     } @else {<p>Agrega productos antes de confirmar.</p><a href="#catalogo">Ir al catálogo</a>}
   }
+
+  <dialog #purchaseDialog class="panel purchase-dialog" aria-labelledby="purchase-title">
+    <h2 id="purchase-title">¿Son estos los productos que quieres comprar?</h2>
+    <p>Revisa la plataforma y la cantidad antes de continuar.</p>
+    @if(quote; as q){
+      <ul>@for(item of q.items; track item.id){
+        <li><strong>{{item.name}}</strong> · {{item.platform}} · {{item.quantity}} unidad(es)</li>
+      }</ul>
+      <p>Total <strong>{{format(q.total)}}</strong></p>
+    }
+    <div class="actions">
+      <button type="button" autofocus (click)="purchaseDialog.close()">Volver a revisar</button>
+      <button type="button" class="primary" [disabled]="busy" (click)="place(purchaseDialog)">Sí, continuar</button>
+    </div>
+  </dialog>
 
   @if(view==='cuenta'){
     <h1 id="page-title" tabindex="-1">Mi cuenta</h1>
@@ -161,11 +180,10 @@
           <details><summary>Registrar dirección</summary><ng-container [ngTemplateOutlet]="addressForm"></ng-container></details>
         </section>}
       </div>
-      @if(!preview){
       <section class="panel"><h2>Mis pedidos</h2>
         @for(o of orders;track o.id){<p class="item"><a [attr.href]="'#pedido/'+o.id">{{o.folio}}</a> <span>{{estado(o.status)}} · {{format(o.total)}} · {{o.created_at}} UTC</span></p>} @empty {<p>Aún no tienes pedidos.</p>}
       </section>
-      <section class="panel"><h2>Mis productos</h2>
+      @if(!preview){<section class="panel"><h2>Mis productos</h2>
         @for(item of purchasedProducts;track item.order_id+'-'+item.sku){
           <article class="item">
             <div><strong>{{item.name}}</strong><p>{{item.platform}} · {{item.sku}} · {{item.quantity}} unidad(es)</p></div>
@@ -174,23 +192,101 @@
             @else if(item.status!=='refunded'){<p>Licencia pendiente de entrega</p>}</div>
           </article>
         } @empty {<p>Aún no tienes productos comprados.</p>}
-      </section>
-      <section class="panel"><h2>Mis solicitudes</h2>
-        @for(c of cases;track c.id){
-          <article class="ticket"><strong>{{c.folio}} · {{caseStatus(c)}}</strong><p>{{c.reason}}</p>
-          @if(c.resolution){<p>Respuesta: {{c.resolution}}</p>}
-          @for(m of c.messages; track $index){<p>{{m.body}} · {{m.created_at}} UTC</p>}
-          @if(c.status==='needs_info'){<form class="inline" (submit)="reply($event,c.id)"><label>Aclaración<input name="message" required maxlength="700"></label><button [disabled]="busy">Enviar información</button></form>}
-          </article>
-        } @empty {<p>Aún no generas solicitudes.</p>}
-        <form class="stack" (submit)="submitCase($event)">
-          <label>Tipo<select name="kind"><option value="support">Soporte o queja</option><option value="privacy">Privacidad y derechos ARCO</option></select></label>
-          <label>Motivo<textarea name="reason" required minlength="5" maxlength="450"></textarea></label>
-          <button [disabled]="busy">Abrir solicitud de atención</button>
-        </form>
-      </section>
-      }
+      </section>}
+      <nav class="actions" aria-label="Atención a clientes">
+        <a class="button" href="#comentarios">Comentarios</a>
+        <a class="button" href="#devoluciones">Devoluciones</a>
+        <a class="button" href="#arco">Derechos ARCO</a>
+      </nav>
     }
+  }
+
+  @if(view==='comentarios'){
+    <h1 id="page-title" tabindex="-1">Comentarios</h1>
+    <div class="split">
+      <section class="panel"><h2>Publicar una queja o comentario</h2>
+        @if(user){
+          <form class="stack" (submit)="submitComment($event)">
+            <p>Publicarás como <strong>{{user.name}}</strong>. Puedes usar tu gamertag como nombre en <a href="#cuenta">Mi cuenta</a>.</p>
+            <label>Comentario o queja<textarea name="body" required minlength="5" maxlength="450" aria-describedby="comment-help"></textarea></label>
+            <p id="comment-help">Los comentarios son públicos. Omite datos personales, folios, contraseñas y claves de juego.</p>
+            <label class="check"><input name="publish" type="checkbox" required> Acepto publicar el texto y mi nombre de perfil.</label>
+            <button class="primary" [disabled]="busy">Publicar comentario</button>
+          </form>
+        } @else {<p><a href="#cuenta">Inicia sesión</a> para publicar con tu nombre de perfil.</p>}
+      </section>
+      <section class="panel"><h2>Comentarios recientes</h2>
+        @for(comment of comments;track comment.id){
+          <article class="ticket"><h3>{{comment.author}}</h3><p class="comment-body">{{comment.body}}</p></article>
+        } @empty {<p>Aún no hay comentarios publicados.</p>}
+      </section>
+    </div>
+    @if(user && supportCases.length){
+      <section class="panel"><h2>Mis solicitudes anteriores de soporte</h2>
+        <ng-container [ngTemplateOutlet]="caseHistory" [ngTemplateOutletContext]="{$implicit:supportCases}"></ng-container>
+      </section>
+    }
+  }
+
+  @if(view==='devoluciones'){
+    <h1 id="page-title" tabindex="-1">Devoluciones</h1>
+    @if(!user){<p>Inicia sesión para seleccionar un pedido y consultar tus solicitudes.</p><ng-container [ngTemplateOutlet]="auth"></ng-container>}
+    @else {
+      <div class="split">
+        <section class="panel"><h2>Solicitar devolución</h2>
+          @if(eligibleOrders.length){
+            <label>Pedido<select #returnOrder [value]="order?.id ?? ''" (change)="selectReturnOrder(returnOrder.value)">
+              <option value="">Selecciona un pedido</option>
+              @for(entry of eligibleOrders;track entry.id){
+                <option [value]="entry.id" [selected]="entry.id===order?.id">{{entry.folio}} · {{estado(entry.status)}} · {{format(entry.total)}}</option>
+              }
+            </select></label>
+          } @else {<p>Cuando tengas un pedido elegible, aparecerá aquí.</p><a href="#catalogo">Ver catálogo</a>}
+          @if(order;as o){
+            <p><a [href]="'#pedido/'+o.id">Ver detalle de {{o.folio}}</a></p>
+            @if(existingCommercialCase;as existing){
+              <p>Este pedido ya tiene una solicitud con el folio <strong>{{existing.folio}}</strong>. Consulta su estado en el historial.</p>
+            } @else {
+              <form class="stack" (submit)="submitCase($event,o.id)">
+                <label>Tipo de solicitud<select name="kind">
+                  @if(o.status!=='pending'){
+                    <option value="return">Devolución</option><option value="warranty">Garantía</option>
+                  }
+                  <option value="cancel">Cancelación</option>
+                </select></label>
+                <label>Partida<select name="productId"><option value="">Pedido completo</option>@for(item of o.items;track item.product_id){<option [value]="item.product_id">{{item.name}}</option>}</select></label>
+                <label>Motivo<textarea name="reason" minlength="5" maxlength="450" required></textarea></label>
+                <label>Referencia de evidencia opcional<input name="evidence" maxlength="450" placeholder="Por ejemplo, nombre del comprobante"></label>
+                <button class="primary" [disabled]="busy">Enviar solicitud</button>
+              </form>
+            }
+          }
+        </section>
+        <section class="panel"><h2>Historial de devoluciones</h2>
+          <ng-container [ngTemplateOutlet]="caseHistory" [ngTemplateOutletContext]="{$implicit:commercialCases}"></ng-container>
+        </section>
+      </div>
+    }
+  }
+
+  @if(view==='arco'){
+    <h1 id="page-title" tabindex="-1">Derechos ARCO</h1>
+    <div class="split">
+      <article class="panel policies"><ng-container [ngTemplateOutlet]="privacyNotice"></ng-container></article>
+      <section class="panel"><h2>Solicitud privada</h2>
+        @if(user){
+          <form class="stack" (submit)="submitCase($event,undefined,'privacy')">
+            <label>Derecho que quieres ejercer<select name="right" required>
+              <option value="">Selecciona una opción</option><option>Acceso</option><option>Rectificación</option><option>Cancelación</option><option>Oposición</option>
+            </select></label>
+            <label>Motivo<textarea name="reason" required minlength="5" maxlength="420"></textarea></label>
+            <button class="primary" [disabled]="busy">Enviar solicitud ARCO</button>
+          </form>
+          <h3>Historial privado</h3>
+          <ng-container [ngTemplateOutlet]="caseHistory" [ngTemplateOutletContext]="{$implicit:privacyCases}"></ng-container>
+        } @else {<p>Inicia sesión para enviar y seguir una solicitud privada.</p><ng-container [ngTemplateOutlet]="auth"></ng-container>}
+      </section>
+    </div>
   }
 
   @if(view==='pedido'){
@@ -203,51 +299,40 @@
         <ul>@for(item of o.items;track item.product_id){<li>{{item.sku}} · {{item.name}} × {{item.quantity}} · {{format(item.unit_price)}} por unidad</li>}</ul>
         <dl><dt>Subtotal</dt><dd>{{format(o.subtotal)}}</dd><dt>Descuento</dt><dd>{{format(o.discount)}}</dd><dt>Envío</dt><dd>{{format(o.shipping)}}</dd><dt>Impuestos adicionales</dt><dd>{{format(o.tax)}}</dd><dt>Total</dt><dd>{{format(o.total)}}</dd></dl>
         <p>Términos {{o.terms_version}} aceptados {{o.consent_at}}.</p>
-        <p>Entrega digital · {{o.address.city}}, {{o.address.region}} {{o.address.postal_code}}</p>
+        @if(!preview){<p>Entrega digital · {{o.address.city}}, {{o.address.region}} {{o.address.postal_code}}</p>}
         <h3>Historial</h3><ol>@for(line of o.history;track $index){<li>{{estado(line.detail)}} · {{line.created_at}} UTC</li>}</ol>
         <p>Comprobante interno de compra simulada. Sin validez fiscal.</p>
         @if(o.status==='pending'){<div class="actions"><button class="primary" [disabled]="busy" (click)="pay(o.id,'approve')">Aprobar pago de prueba</button><button [disabled]="busy" (click)="pay(o.id,'decline')">Rechazar pago de prueba</button></div>}
       </section>
       @if(o.status!=='cancelled' && o.status!=='refunded'){
-        <section class="panel"><h2>Cancelar, devolver o solicitar garantía</h2>
-          <form class="stack" (submit)="submitCase($event,o.id)">
-            <label>Tipo de solicitud<select name="kind"><option value="cancel">Cancelación</option>@if(o.status!=='pending'){<option value="return">Devolución</option><option value="warranty">Garantía</option>}</select></label>
-            <label>Partida<select name="productId"><option value="">Pedido completo</option>@for(item of o.items;track item.product_id){<option [value]="item.product_id">{{item.name}}</option>}</select></label>
-            <label>Motivo<textarea name="reason" minlength="5" maxlength="450" required></textarea></label>
-            <label>Referencia de evidencia opcional<input name="evidence" maxlength="450" placeholder="Por ejemplo, mensaje de activación"></label>
-            <button [disabled]="busy">Enviar solicitud</button>
-          </form>
-        </section>
+        <a class="button" [href]="'#devoluciones/'+o.id">Gestionar devolución, cancelación o garantía</a>
       }
     }
   }
 
   @if(view==='ayuda'){
-    <div class="section-head"><h1 id="page-title" tabindex="-1">Ayuda y políticas</h1>@if(!preview){<a class="button primary" href="#cuenta">Abrir una solicitud</a>}</div>
+    <div class="section-head"><h1 id="page-title" tabindex="-1">Ayuda y políticas</h1><a class="button" href="#arco">Aviso de privacidad y derechos ARCO</a></div>
     @if(preview){
       <article class="panel policies">
-        <h2>Vista previa académica</h2>
-        <p>Puedes explorar el catálogo y crear una cuenta de prueba. Los importes del catálogo están en pesos mexicanos. Los pedidos y pagos de prueba se realizan en la versión con servidor.</p>
-        <h2>Privacidad del perfil</h2>
-        <p>Firebase Authentication gestiona el acceso con correo y contraseña. Tu nombre y foto se guardan en un perfil al que solo puedes acceder con tu cuenta. Usa un nombre de prueba. Puedes cambiar la foto desde Mi cuenta o elegir un avatar.</p>
-        <ng-container [ngTemplateOutlet]="privacyNotice"></ng-container>
+        <h2>Tienda académica</h2>
+        <p>Puedes crear una cuenta, guardar pedidos de prueba y solicitar devoluciones. Los importes están en pesos mexicanos y las existencias son de referencia. El sitio no procesa cobros ni emite licencias comerciales.</p>
+        <p>Usa <a href="#comentarios">Comentarios</a> para publicar con tu nombre de perfil. Las solicitudes de <a href="#devoluciones">Devoluciones</a> y <a href="#arco">Derechos ARCO</a> se consultan desde tu cuenta.</p>
       </article>
     } @else {
     <article class="panel policies">
-      <h2>Contacto</h2><p>Manu Games Operadora Académica, identidad ficticia. RFC de demostración MGX261119DE0, sin registro fiscal. Domicilio ficticio Av. Ejemplo 100, Nuevo Laredo, Tamaulipas, México. Contacto ilustrativo soporte&#64;manugames.example. Usa el formulario de Mi cuenta para generar un folio de atención. Horario de simulación de lunes a viernes de 09:00 a 17:00, con objetivo de respuesta de un día hábil.</p>
+      <h2>Contacto</h2><p>Manu Games Operadora Académica, identidad ficticia. RFC de demostración MGX261119DE0, sin registro fiscal. Domicilio ficticio Av. Ejemplo 100, Nuevo Laredo, Tamaulipas, México. Contacto ilustrativo soporte&#64;manugames.example. Usa Devoluciones o Derechos ARCO para generar un folio de atención. Horario de simulación de lunes a viernes de 09:00 a 17:00, con objetivo de respuesta de un día hábil.</p>
       <h2>Términos de compra</h2><p>Versión {{termsVersion||'2026-11-19'}}. La tienda académica opera en pesos mexicanos. Consulta precio, existencia, compatibilidad, descuento y cargos antes de aceptar el resumen. Cualquier cambio en existencias o precio requiere revisar la compra. Los pedidos y referencias son de prueba. Las portadas y nombres comerciales identifican los productos de la demostración.</p>
-      <ng-container [ngTemplateOutlet]="privacyNotice"></ng-container>
       <h2>Entrega digital</h2>
       <p>Cobertura de demostración en México, con entrega para la plataforma indicada en la ficha. El costo de envío es de $0 MXN. La administración prepara el pedido y registra la referencia digital. Al marcarlo Entregado, la licencia simulada aparece en Mi cuenta. El objetivo para la demostración es liberarla en la misma sesión. Si falta la licencia, resulta incompatible o llega duplicada, abre una solicitud desde el pedido.</p>
       <h2>Cancelaciones y devoluciones</h2>
-      <p>Desde el detalle del pedido, selecciona el tipo de solicitud, el motivo y, cuando aplique, la partida afectada. Describe la incidencia y adjunta una referencia de prueba sin incluir credenciales ni datos de pago. El folio y el acuse aparecen en Mis solicitudes y la primera respuesta tiene como objetivo un día hábil.</p>
+      <p>En Devoluciones, selecciona el pedido, el tipo de solicitud y, cuando aplique, la partida afectada. Describe la incidencia y agrega una referencia de prueba sin incluir credenciales ni datos de pago. El folio y el acuse aparecen en el historial de Devoluciones y la primera respuesta tiene como objetivo un día hábil.</p>
       <p>Un pedido pendiente puede cancelarse antes de aprobar el pago. Para un pedido pagado, el operador revisa el estado y el motivo, incluidas la entrega faltante, la plataforma incorrecta, la licencia defectuosa o una solicitud de revocación cuando corresponda. Puede pedir una aclaración, aprobar la solicitud o explicar el rechazo. Puedes responder en el folio cuando se solicite información adicional.</p>
       <p>Si procede, el simulador registra un reembolso del pedido completo y repone las unidades. El resultado se refleja en el pedido al quedar resuelto. La entrega es digital, por lo que el ejercicio prescinde de envíos físicos de retorno. Los plazos de atención de la demostración respetan los derechos aplicables.</p>
       <h2>Garantías y reposiciones</h2>
       <p>El operador académico atiende incidencias de licencias erróneas, duplicadas o sin entrega en el formulario del pedido. Revisa el folio, la versión y plataforma, y registra la resolución. Si aprueba una reposición, la nueva referencia aparece en el historial. Para una garantía comercial real, se debe informar su duración, alcance, exclusiones válidas, responsable y procedimiento en la ficha y en la póliza aplicable.</p>
       <h2>Pago simulado y comprobante</h2>
       <p>El simulador registra la aprobación o el rechazo sin pedir datos de tarjeta. Consulta el folio y el comprobante interno en el pedido. Para una emisión fiscal real, el proceso requeriría un canal autorizado y los datos fiscales aplicables. Esta demostración emite un comprobante académico.</p>
-      <h2>Preguntas frecuentes</h2><p>¿Dónde está el folio? En Mi cuenta, sección Mis pedidos. ¿Cómo se consulta un reembolso? En Mis solicitudes. ¿Se genera un cobro? Las operaciones son simuladas. ¿Cómo aplico el descuento? Introduce DEMO10 en el resumen antes de confirmar.</p>
+      <h2>Preguntas frecuentes</h2><p>¿Dónde está el folio? En Mi cuenta, sección Mis pedidos. ¿Cómo se consulta un reembolso? En Devoluciones. ¿Se genera un cobro? Las operaciones son simuladas. ¿Cómo aplico el descuento? Introduce DEMO10 en el resumen antes de confirmar.</p>
     </article>
     }
   }
@@ -259,9 +344,21 @@
   }
 </main>
 <footer><div class="wrap footer"><a class="brand" href="#inicio"><span class="mark" aria-hidden="true">M</span> MANU<span>GAMES</span></a><p>Proyecto académico · pagos y licencias de prueba</p><a href="#ayuda">Contacto y políticas</a></div></footer>
+<ng-template #caseHistory let-tickets>
+  @for(c of tickets;track c.id){
+    <article class="ticket"><strong>{{c.folio}} · {{caseStatus(c)}}</strong>
+      <p class="comment-body">{{c.reason}}</p>
+      @if(c.resolution){<p>Respuesta: {{c.resolution}}</p>}
+      @for(m of c.messages;track $index){<p>{{m.body}} · {{m.created_at}} UTC</p>}
+      @if(c.status==='needs_info' && !preview){
+        <form class="inline" (submit)="reply($event,c.id)"><label>Aclaración<input name="message" required maxlength="700"></label><button [disabled]="busy">Enviar información</button></form>
+      }
+    </article>
+  } @empty {<p>Aún no tienes solicitudes en esta sección.</p>}
+</ng-template>
 <ng-template #privacyNotice>
   <h2>Aviso de privacidad integral</h2>
-  <p>Manu Games Operadora Académica es el responsable ficticio del tratamiento. El catálogo en Firebase usa nombre, correo y foto opcional para gestionar el acceso y el perfil. La versión completa también usa domicilio de prueba, pedidos y solicitudes para simular la compra y la entrega, brindar soporte y proteger la cuenta. Utiliza datos ficticios. El proyecto utiliza pagos simulados.</p>
+  <p>Manu Games Operadora Académica es el responsable ficticio del tratamiento. La tienda usa nombre, correo y foto opcional para gestionar el acceso y el perfil. Guarda pedidos de prueba y solicitudes privadas de devolución y ARCO. En Comentarios se muestran el texto y el nombre de perfil que confirmaste al publicar. La versión con servidor también usa un domicilio de prueba para simular la entrega. Utiliza datos ficticios.</p>
   <p>El tratamiento se explica conforme a la <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf" target="_blank" rel="noopener noreferrer">Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</a>. Esta página publica las actualizaciones del aviso. Puedes eliminar tu foto al cambiarla por un avatar del catálogo.</p>
   <h3>Derechos ARCO</h3>
   <dl>
@@ -270,7 +367,7 @@
     <dt>Cancelación</dt><dd>Solicita el retiro de tus datos cuando proceda conforme a la ley.</dd>
     <dt>Oposición</dt><dd>Solicita que cese un tratamiento determinado cuando corresponda.</dd>
   </dl>
-  <p>El aviso original identifica <strong>privacidad&#64;manugames.com</strong> como correo de referencia. En la versión completa puedes registrar una solicitud de práctica desde <a href="#cuenta">Mi cuenta</a>, en <strong>Privacidad y derechos ARCO</strong>. Indica el derecho que quieres ejercer, el dato involucrado y el medio de respuesta. Evita incluir contraseñas o documentos de identidad en la demostración.</p>
+  <p>El aviso original identifica <strong>privacidad&#64;manugames.com</strong> como correo de referencia. Puedes registrar una solicitud de práctica en el formulario privado de esta sección. Indica el derecho que quieres ejercer y el dato involucrado. Evita incluir contraseñas o documentos de identidad.</p>
   <p>El artículo 31 prevé hasta 20 días para comunicar la determinación y, si la solicitud procede, 15 días adicionales para hacerla efectiva. La ley contempla ampliaciones justificadas en los supuestos aplicables.</p>
 </ng-template>
 <ng-template #auth>

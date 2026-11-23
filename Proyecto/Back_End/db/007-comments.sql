@@ -1,0 +1,6 @@
+CREATE TABLE community_comments (
+  id INTEGER PRIMARY KEY,
+  author TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+) STRICT;

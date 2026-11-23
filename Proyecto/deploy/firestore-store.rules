@@ -18,4 +18,93 @@
           || (request.resource.data.avatar.size() <= 16000
             && request.resource.data.avatar.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$')));
     }
+
+    function ownsAccount(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function textBetween(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+    function isUuid(value) {
+      return value is string && value.matches('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+    }
+    match /manuGamesComments/{id} {
+      allow get, list: if true;
+      allow create: if request.auth != null
+        && isUuid(id)
+        && request.resource.data.keys().hasOnly(['author','body','created_at'])
+        && textBetween(request.resource.data.author, 2, 90)
+        && request.resource.data.author == get(/databases/$(database)/documents/manuGamesProfiles/$(request.auth.uid)).data.name
+        && textBetween(request.resource.data.body, 5, 450)
+        && request.resource.data.created_at == request.time;
+    }
+
+    function catalogLine(item, sku) {
+      let product = get(/databases/$(database)/documents/manuGamesCatalog/$(sku)).data;
+      return sku is string && sku.matches('^MG-[0-9]+$')
+        && item is map && item.keys().hasOnly(['product_id','sku','name','platform','unit_price','quantity'])
+        && item.sku == sku && product.active == 1 && item.product_id == product.id
+        && item.name == product.name && item.platform == product.platform
+        && item.unit_price is int && item.unit_price == product.price
+        && item.quantity is int && item.quantity >= 1 && item.quantity <= 99 && item.quantity <= product.stock;
+    }
+    function lineTotal(items, index) {
+      return items.size() > index ? items[index].unit_price * items[index].quantity : 0;
+    }
+    function validItems(data) {
+      let items = data.items;
+      let skus = data.skus;
+      return items is list && skus is list && items.size() >= 1 && items.size() <= 6
+        && skus.size() == items.size() && skus.toSet().size() == items.size()
+        && catalogLine(items[0], skus[0])
+        && (items.size() < 2 || catalogLine(items[1], skus[1]))
+        && (items.size() < 3 || catalogLine(items[2], skus[2]))
+        && (items.size() < 4 || catalogLine(items[3], skus[3]))
+        && (items.size() < 5 || catalogLine(items[4], skus[4]))
+        && (items.size() < 6 || catalogLine(items[5], skus[5]))
+        && data.subtotal == lineTotal(items, 0) + lineTotal(items, 1) + lineTotal(items, 2)
+          + lineTotal(items, 3) + lineTotal(items, 4) + lineTotal(items, 5);
+    }
+    match /manuGamesAccounts/{uid}/orders/{id} {
+      allow get, list: if ownsAccount(uid);
+      allow create: if ownsAccount(uid)
+        && isUuid(id)
+        && request.resource.data.keys().hasOnly(['folio','status','items','skus','terms_version','subtotal','discount','total','created_at'])
+        && request.resource.data.status == 'paid'
+        && request.resource.data.terms_version == '2026-11-19'
+        && request.resource.data.created_at == request.time
+        && textBetween(request.resource.data.folio, 39, 39)
+        && request.resource.data.subtotal is int && request.resource.data.subtotal >= 0
+        && request.resource.data.discount is int && request.resource.data.discount >= 0
+        && (request.resource.data.discount == 0
+          || (request.resource.data.discount * 10 <= request.resource.data.subtotal
+            && request.resource.data.discount * 10 + 9 >= request.resource.data.subtotal))
+        && request.resource.data.total is int
+        && request.resource.data.total == request.resource.data.subtotal - request.resource.data.discount
+        && validItems(request.resource.data);
+    }
+
+    function hasItem(items, productId, index) {
+      return items.size() > index && items[index].product_id == productId;
+    }
+    function validCommercialCase(uid, id, data) {
+      let order = get(/databases/$(database)/documents/manuGamesAccounts/$(uid)/orders/$(id)).data;
+      return data.kind in ['return','cancel','warranty'] && data.order_id == id && order.status == 'paid'
+        && (data.product_id == null || (data.product_id is int
+          && (hasItem(order.items, data.product_id, 0) || hasItem(order.items, data.product_id, 1)
+            || hasItem(order.items, data.product_id, 2) || hasItem(order.items, data.product_id, 3)
+            || hasItem(order.items, data.product_id, 4) || hasItem(order.items, data.product_id, 5))));
+    }
+    match /manuGamesAccounts/{uid}/cases/{id} {
+      allow get, list: if ownsAccount(uid);
+      allow create: if ownsAccount(uid) && isUuid(id)
+        && request.resource.data.keys().hasOnly(['folio','kind','status','reason','evidence','order_id','product_id','resolution','created_at'])
+        && request.resource.data.created_at == request.time && request.resource.data.status == 'open'
+        && textBetween(request.resource.data.folio, 16, 16)
+        && textBetween(request.resource.data.reason, 5, 450)
+        && textBetween(request.resource.data.evidence, 0, 450)
+        && request.resource.data.resolution == null
+        && ((request.resource.data.kind == 'privacy' && request.resource.data.order_id == null && request.resource.data.product_id == null)
+          || validCommercialCase(uid, id, request.resource.data));
+    }
     // END MANU GAMES

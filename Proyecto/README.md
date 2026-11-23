@@ -58,14 +58,22 @@ firebase deploy --only hosting --config firebase.hosting.json --project TU_PROYE
 
 Verifica `/api/health` en el dominio de Hosting y completa una compra con una cuenta de prueba. Firebase Hosting reenvía la cookie de sesión `__session` cuando `FIREBASE_HOSTING_PROXY=1`.
 
-## Vista previa en Firebase Spark
+## Tienda académica en Firebase Spark
 
-El [sitio publicado](https://manugames-d4df7.web.app) conserva el diseño de terminal y ofrece el catálogo, las fichas
-de producto, el registro, el inicio de sesión y la foto de perfil. El catálogo
-usa la colección `manuGamesCatalog` de Cloud Firestore. Las cuentas usan
-Firebase Authentication y cada perfil se guarda en `manuGamesProfiles/{uid}`.
-La tienda con carrito, pedidos, pagos simulados y administración se ejecuta con
-`npm start` o se publica con Cloud Run.
+El [sitio publicado](https://manugames-d4df7.web.app) incluye el catálogo, el perfil y un carrito
+con confirmación de productos, plataformas, cantidades y total. En Spark el pedido de prueba se registra
+al confirmar. No hay cobro ni entrega de licencias. El inventario de referencia limita las cantidades del
+pedido y el simulador Spark no descuenta las existencias compartidas.
+
+- **Comentarios** publica el nombre de perfil o gamertag y el texto confirmado por el usuario.
+- **Devoluciones** permite elegir un pedido y guarda un folio privado de devolución, cancelación o garantía.
+- **Derechos ARCO** contiene el aviso y el formulario privado para ejercer cada derecho.
+
+Firebase Authentication gestiona las cuentas. En Cloud Firestore, `manuGamesCatalog` y `manuGamesComments`
+se pueden leer públicamente. `manuGamesProfiles/{uid}` y las subcolecciones `orders` y `cases` de
+`manuGamesAccounts/{uid}` se consultan con la cuenta titular. Un operador con acceso al proyecto puede
+revisar las solicitudes y registrar una respuesta mediante los campos `status` y `resolution` en Firestore.
+La demo con servidor conserva el panel, el simulador de pago, la entrega de prueba y el flujo administrativo de reembolso.
 
 Activa el proveedor Correo electrónico/contraseña en Firebase Authentication
 y usa una app web asociada al sitio de Hosting. Desde la carpeta `Proyecto` en
@@ -77,14 +85,15 @@ existentes, retira las 16 fichas académicas y actualiza la portada de Hivebuste
 node deploy/prepare-firestore.cjs catalog manugames-d4df7
 node deploy/prepare-firestore.cjs rules manugames-d4df7
 firebase deploy --only firestore:rules --config firebase.firestore.local.json --project manugames-d4df7
+node deploy/prepare-firestore.cjs availability manugames-d4df7
 npm run build -- --configuration production,spark
-firebase hosting:channel:deploy catalogo --expires 30d --config firebase.spark.json --project manugames-d4df7
+firebase deploy --only hosting --config firebase.spark.json --project manugames-d4df7
 ```
 
-El preparador verifica con el simulador de reglas que el catálogo sea público
-para lectura y que el perfil sea privado. Revisa `firestore.merged.rules` antes
-de publicarlo. En Firestore puedes editar precios, existencias y descripciones
-por SKU de la vista previa. Los precios
+El preparador verifica que las lecturas públicas, el perfil y las solicitudes tengan los permisos previstos.
+Revisa `firestore.merged.rules` antes de publicarlo. La operación `availability` repone diez unidades
+a los juegos visibles con stock cero y al SKU MG-043, y actualiza las fichas correspondientes.
+Los precios
 se guardan en centavos de MXN y las imágenes del catálogo se sirven desde Hosting.
 La compilación lee la configuración web del proyecto con
 `/__/firebase/init.json`.

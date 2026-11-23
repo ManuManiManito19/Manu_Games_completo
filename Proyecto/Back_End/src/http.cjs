@@ -195,6 +195,8 @@ function createApp(options={}){
     return {status:order.payment_status,reference:order.reference,amount:order.total,provider:'simulator'};
   });
   add('GET','/returns','client',c=>support.caseList(c.db,{...c.user,role:'client'}));
+  add('GET','/comments','public',c=>support.listComments(c.db));
+  add('POST','/comments','client',c=>{c.status=201;return support.postComment(c.db,c.user,c.body);});
   add('POST','/returns','client',c=>{c.status=201;return support.createCase(c.db,c.user,c.body);});
   add('POST','/returns/(\\d+)/messages','client',c=>support.addCaseMessage(c.db,c.user,c.id,c.body));
   add('GET','/admin/products','admin',c=>c.db.prepare(shop.listProducts+' ORDER BY p.id DESC LIMIT 250').all());

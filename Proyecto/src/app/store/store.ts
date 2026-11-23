@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
-import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, PurchasedProduct, Quote, SupportCase, User, labels, mx, values } from './api';
+import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, Product, PurchasedProduct, Quote, StoreComment, SupportCase, User, labels, mx, values } from './api';
 import { Manager } from './manager';
 import { encodeAvatar, isUploadedAvatar } from './avatar';
 
@@ -22,12 +22,14 @@ export class Store implements OnInit {
   orders:OrderSummary[]=[];
   purchasedProducts:PurchasedProduct[]=[];
   cases:SupportCase[]=[];
+  comments:StoreComment[]=[];
   order?:Order;
   payment?:Order;
   coupon='';
   addressId=0;
   selectedTermsVersion='';
   requestKey='';
+  pendingAddressId=0;
   termsVersion='';
   labels=labels;
   readonly avatars=[
@@ -41,6 +43,14 @@ export class Store implements OnInit {
   get filtered(){return Object.values(this.filters).some(Boolean);}
   get showPrevious(){return this.catalog.page>1;}
   get showNext(){return this.catalog.page*this.catalog.pageSize<this.catalog.total;}
+  get commercialCases(){return this.cases.filter(ticket=>['cancel','return','warranty'].includes(ticket.kind));}
+  get privacyCases(){return this.cases.filter(ticket=>ticket.kind==='privacy');}
+  get supportCases(){return this.cases.filter(ticket=>ticket.kind==='support');}
+  get eligibleOrders(){return this.orders.filter(order=>!['cancelled','refunded'].includes(order.status));}
+  get existingCommercialCase(){
+    return this.commercialCases.find(ticket=>String(ticket.order_id)===String(this.order?.id)
+      && (this.preview||['open','needs_info'].includes(ticket.status)));
+  }
   format(value:number){return mx.format(value/100);}
   avatarImage(id?:string){
     if (id && isUploadedAvatar(id)) return id;
@@ -86,22 +96,36 @@ export class Store implements OnInit {
   private async loadView(focus=false){
     const [view,id]=location.hash.replace(/^#\/?/,'').split('/');
     this.notice='';
-    const views = this.preview ? ['catalogo','producto','cuenta','ayuda'] :
-      ['catalogo','producto','carrito','checkout','cuenta','pedido','ayuda','admin'];
-    this.view=views.includes(view)?view:'inicio';
+    const views=['catalogo','producto','carrito','checkout','cuenta','pedido','ayuda','comentarios','devoluciones','arco'];
+    this.view=views.includes(view)||(!this.preview&&view==='admin')?view:'inicio';
     this.id=Number(id||0);
     if(this.view==='inicio'||this.view==='catalogo') await this.loadPage(1);
     if(this.view==='producto') this.product=await this.api.call<Product>('/products/'+this.id);
     if(this.view==='carrito')this.cart=await this.api.call<Cart>('/cart');
     if(this.view==='checkout'&&this.user){
-      this.addresses=await this.api.call<Address[]>('/addresses');
+      this.addresses=this.preview?[]:await this.api.call<Address[]>('/addresses');
       this.addressId=this.addresses[0]?.id||0;
       this.payment=undefined;
       this.quote=undefined;
       if(this.cartCount) await this.refreshQuote();
     }
-    if(this.view==='cuenta'&&this.user&&!this.preview) await this.accountData();
-    if(this.view==='pedido'&&this.user) this.order=await this.api.call<Order>('/orders/'+this.id);
+    if(this.view==='cuenta'&&this.user) await this.accountData();
+    if(this.view==='pedido'&&this.user) {
+      this.order=undefined;
+      this.order=await this.api.call<Order>('/orders/'+encodeURIComponent(id??''));
+    }
+    if(this.view==='comentarios') this.comments=await this.api.call<StoreComment[]>('/comments');
+    if(this.user&&['comentarios','devoluciones','arco'].includes(this.view)) {
+      this.cases=await this.api.call<SupportCase[]>('/returns');
+    }
+    if(this.view==='devoluciones'){
+      this.order=undefined;
+      if(this.user){
+        this.orders=await this.api.call<OrderSummary[]>('/orders');
+        const selected=this.eligibleOrders.find(order=>String(order.id)===id);
+        if(selected) this.order=await this.api.call<Order>('/orders/'+encodeURIComponent(id));
+      }
+    }
     if(this.view==='admin'&&this.user?.role==='admin') this.categories=await this.api.call<Category[]>('/categories');
     if(focus)setTimeout(()=>document.getElementById('page-title')?.focus({preventScroll:true}),0);
     window.scrollTo(0,0);
@@ -158,7 +182,7 @@ export class Store implements OnInit {
       this.user=s.user;
       this.termsVersion=s.termsVersion;
       this.cart=await this.api.call<Cart>('/cart');
-      if(this.view==='checkout')await this.loadView();
+      if(['checkout','comentarios','devoluciones','arco','pedido'].includes(this.view))await this.loadView();
       else if(s.user?.role==='admin')this.go('admin');
       else this.go('inicio');
     });
@@ -171,10 +195,12 @@ export class Store implements OnInit {
     this.go('inicio');
   });}
   private async accountData(){
-    [this.addresses,this.orders,this.cases,this.purchasedProducts]=await Promise.all([
-      this.api.call<Address[]>('/addresses'),this.api.call<OrderSummary[]>('/orders'),this.api.call<SupportCase[]>('/returns'),
-      this.api.call<PurchasedProduct[]>('/library')
-    ]);
+    this.orders=await this.api.call<OrderSummary[]>('/orders');
+    if(!this.preview){
+      [this.addresses,this.purchasedProducts]=await Promise.all([
+        this.api.call<Address[]>('/addresses'),this.api.call<PurchasedProduct[]>('/library')
+      ]);
+    }
   }
   profile(event:Event){
     const data=values(event);
@@ -218,18 +244,29 @@ export class Store implements OnInit {
     this.coupon=values(event)['coupon']||'';
     return this.run(()=>this.refreshQuote());
   }
-  place(event:Event){
+  reviewPurchase(event:Event, dialog:HTMLDialogElement){
     const data=values(event);
+    if(!this.quote||data['accepted']!=='on')return;
+    this.pendingAddressId=Number(data['addressId']||0);
+    dialog.showModal();
+  }
+  place(dialog:HTMLDialogElement){
+    dialog.close();
     return this.run(async()=>{
       if(!this.quote)return;
       // El identificador de la cotización se mantiene durante los reintentos.
       this.payment=await this.api.call<Order>('/orders','POST',{
-        addressId:Number(data['addressId']),method:'digital',coupon:this.coupon,
-        quotedTotal:this.quote.total,accepted:data['accepted']==='on',termsVersion:this.selectedTermsVersion,requestKey:this.requestKey
+        addressId:this.pendingAddressId,method:'digital',coupon:this.coupon,
+        quotedTotal:this.quote.total,accepted:true,termsVersion:this.selectedTermsVersion,requestKey:this.requestKey
       });
+      if(this.preview){
+        const orderId=this.payment.id;
+        this.cart=await this.api.call<Cart>('/cart');
+        this.go('pedido/'+orderId);
+      }
     });
   }
-  pay(id:number,outcome:'approve'|'decline'){
+  pay(id:number|string,outcome:'approve'|'decline'){
     return this.run(async()=>{
       await this.api.call<Order>('/payments/'+id+'/confirm','POST',{outcome});
       this.cart=await this.api.call<Cart>('/cart');
@@ -237,17 +274,34 @@ export class Store implements OnInit {
       else this.go('pedido/'+id);
     });
   }
-  submitCase(event:Event, orderId?:number){
+  selectReturnOrder(id:string){this.go('devoluciones'+(id?'/'+encodeURIComponent(id):''));}
+  submitCase(event:Event, orderId?:number|string, fixedKind?:string){
     const data=values(event);
+    const form=event.target as HTMLFormElement;
     return this.run(async()=>{
       const item=Number(data['productId']||0);
-      const ticket=await this.api.call<{folio:string}>('/returns','POST',{...data,orderId,productId:item||undefined});
+      const reason=data['right']?data['right']+': '+data['reason']:data['reason'];
+      const ticket=await this.api.call<{folio:string}>('/returns','POST',{...data,reason,kind:fixedKind??data['kind'],orderId,productId:item||undefined});
       this.notice='Solicitud registrada con el folio '+ticket.folio+'.';
-      if(this.view==='cuenta')await this.accountData();
+      form.reset();
+      this.cases=await this.api.call<SupportCase[]>('/returns');
     });
   }
-  reply(event:Event,id:number){
+  reply(event:Event,id:number|string){
     const data=values(event);
-    return this.run(async()=>{await this.api.call('/returns/'+id+'/messages','POST',data);await this.accountData();});
+    return this.run(async()=>{
+      await this.api.call('/returns/'+encodeURIComponent(id)+'/messages','POST',data);
+      this.cases=await this.api.call<SupportCase[]>('/returns');
+    });
+  }
+  submitComment(event:Event){
+    const data=values(event);
+    const form=event.target as HTMLFormElement;
+    return this.run(async()=>{
+      await this.api.call('/comments','POST',{body:data['body'],publish:data['publish']==='on'});
+      form.reset();
+      this.comments=await this.api.call<StoreComment[]>('/comments');
+      this.notice='Tu comentario fue publicado.';
+    });
   }
 }

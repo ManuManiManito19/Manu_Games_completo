@@ -36,15 +36,16 @@ module.exports = [
   ["Complementos", "Red Dead Online — 25 lingotes de oro", "Red Dead Online — 25 lingotes de oro", "Moneda virtual de Red Dead Online para adquirir artículos y contenido dentro del juego. Requiere acceso a Red Dead Online.", "Xbox One", 19900, 25, "rdo-lingotes.jpg"],
   ["DLCs", "Gears 5: Hivebusters", "Gears 5: Hivebusters", "Expansión de campaña en la que Lahni, Keegan y Mac forman el escuadrón Scorpio para destruir una colmena del Enjambre. Requiere el juego base Gears 5.", "Xbox One / Xbox Series X|S / PC", 34900, 15, "gears-5-hivebusters.jpg"],
   ["Juegos", "Call of Duty: Black Ops 7", "Call of Duty: Black Ops 7", "Juego de acción con campaña, multijugador y Zombis.", "PC / Xbox / PlayStation", 139900, 18, "blackops7.jpg"],
-  ["Juegos", "Gears of War: E-Day", "Gears of War: E-Day", "Ficha de referencia del juego sobre el Día de la Emergencia. Disponibilidad por confirmar.", "Xbox / PC", 139900, 0, "gears-e-day.jpg"],
-  ["Juegos", "Elden Ring: Tarnished Edition", "Elden Ring: Tarnished Edition", "Ficha de referencia de la edición Tarnished. Disponibilidad por confirmar.", "Nintendo Switch 2", 119900, 0, "elden-ring-tarnished.png"],
+  ["Juegos", "Gears of War: E-Day", "Gears of War: E-Day", "Juego de acción ambientado en el Día de la Emergencia, el inicio de la guerra contra la Horda Locust.", "Xbox / PC", 139900, 10, "gears-e-day.jpg"],
+  ["Juegos", "Elden Ring: Tarnished Edition", "Elden Ring: Tarnished Edition", "Edición de Elden Ring para Nintendo Switch 2.", "Nintendo Switch 2", 119900, 10, "elden-ring-tarnished.png"],
   ["Juegos", "God of War", "God of War", "Aventura de Kratos y Atreus por los reinos nórdicos.", "PC / PlayStation", 79900, 10, "god-of-war.jpg"],
   ["Juegos", "Minecraft", "Minecraft", "Juego de construcción y exploración en mundos de bloques.", "PC / Consolas", 69900, 16, "minecraft.jpg"],
   ["Juegos", "Elden Ring Nightreign", "Elden Ring Nightreign", "Aventura independiente de acción y supervivencia cooperativa.", "PC / Xbox / PlayStation", 89900, 14, "nightreign.jpg"],
-  ["Complementos", "Gears of War: E-Day - 1,000 Iron (demo)", "Hierro de Gears of War: E-Day", "Ejemplo de microtransacción para la demostración. Disponibilidad por confirmar.", "Xbox", 19900, 0, "gears-iron-1000.png"]
+  ["Complementos", "Gears of War: E-Day - 1,000 Iron", "Hierro de Gears of War: E-Day", "Paquete de 1,000 de hierro para contenido compatible de Gears of War: E-Day en Xbox.", "Xbox", 19900, 10, "gears-iron-1000.png"]
   // Los SKU semilla siguen el orden del listado. Agrega nuevas referencias al final.
 ];
 
 // Retain the original SKU positions for historical orders and cloud documents.
 module.exports.retiredCount = 16;
 module.exports.complementRevisions = [31, 32, 33, 34, 43];
+module.exports.availabilityRevisions = [38, 39, 43];

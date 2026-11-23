@@ -77,14 +77,14 @@ export class Manager implements OnInit {
     return this.save('/admin/coupons','POST',{...data,percent:Number(data['percent']),max_uses:Number(data['max_uses']),ends_at:data['ends_at']+'T23:59:59Z',active:data['active']==='on'},
       ()=>{this.editingCoupon=undefined;(event.target as HTMLFormElement).reset();});
   }
-  viewOrder(id:number){return this.run(async()=>{this.order=await this.api.call<Order>('/orders/'+id);});}
-  advance(id:number,status:string){
+  viewOrder(id:number|string){return this.run(async()=>{this.order=await this.api.call<Order>('/orders/'+id);});}
+  advance(id:number|string,status:string){
     return this.run(async()=>{
       this.order=await this.api.call<Order>('/admin/orders/'+id,'PATCH',{status});
       await this.load();this.notice='Estado actualizado.';
     });
   }
-  resolve(event:globalThis.Event,id:number){
+  resolve(event:globalThis.Event,id:number|string){
     return this.save('/admin/returns/'+id,'PATCH',values(event));
   }
   private save(path:string,method:string,body?:object,after?:()=>void){

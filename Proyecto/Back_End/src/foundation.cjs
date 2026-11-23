@@ -5,7 +5,7 @@ const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, resolve, join } = require('node:path');
 const derive = promisify(scrypt);
 const termsVersion = '2026-11-19';
-const migrations = [[1, '001-initial.sql'], [2, '002-terminal.sql'], [4, '004-profile-photo.sql']];
+const migrations = [[1, '001-initial.sql'], [2, '002-terminal.sql'], [4, '004-profile-photo.sql'], [7, '007-comments.sql']];
 const avatarIds = ['memo', 'cyber', 'gamer', 'neon', 'hacker'];
 
 class Problem extends Error {

@@ -10,13 +10,14 @@ function addStoreRules(existing, ownRules) {
   if (!root.test(existing)) throw new Error('No se encontró el ámbito de documentos en las reglas actuales.');
   // Firestore grants access if any matching rule allows it. Exclude the new
   // collections from the legacy wildcard before adding owner-only rules.
+  const excluded = "      allow read, write: if !(legacyCollection in ['manuGamesCatalog', 'manuGamesProfiles', 'manuGamesComments', 'manuGamesAccounts']);";
   const scoped = existing.replace(openCatchAll, [
     'match /{legacyCollection}/{legacyDocument=**} {',
-    "      allow read, write: if !(legacyCollection in ['manuGamesCatalog', 'manuGamesProfiles']);",
+    excluded,
     '    }',
-  ].join('\n'));
+  ].join('\n')).replace(/^[ \t]*allow read, write: if !\(legacyCollection in \['manuGamesCatalog', 'manuGamesProfiles'\]\);/m, excluded);
   return markers.test(scoped)
-    ? scoped.replace(markers, ownRules)
+    ? scoped.replace(markers, () => ownRules)
     : scoped.replace(root, match => match + '\n' + ownRules + '\n');
 }
 
@@ -56,6 +57,16 @@ async function checkRules(project, content, request) {
     ['DENY', 'get', profile, visitor],
     ['ALLOW', 'get', profile, owner],
     ['DENY', 'list', 'manuGamesProfiles', owner],
+    ['ALLOW', 'get', 'manuGamesComments/comment'],
+    ['DENY', 'create', 'manuGamesComments/comment'],
+    ['DENY', 'delete', 'manuGamesComments/comment', owner],
+    ['ALLOW', 'get', 'manuGamesAccounts/' + owner.uid + '/orders/order', owner],
+    ['DENY', 'get', 'manuGamesAccounts/' + owner.uid + '/orders/order', visitor],
+    ['DENY', 'get', 'manuGamesAccounts/' + owner.uid + '/cases/case'],
+    ['DENY', 'get', 'manuGamesAccounts/' + owner.uid + '/cases/case', visitor],
+    ['DENY', 'list', 'manuGamesAccounts/' + owner.uid + '/cases', visitor],
+    ['ALLOW', 'get', 'manuGamesAccounts/' + owner.uid + '/cases/case', owner],
+    ['DENY', 'update', 'manuGamesAccounts/' + owner.uid + '/cases/case', owner],
   ].map(([expectation, method, path, auth]) => ({
     expectation, request: { method, path: base + path, auth },
   }));
@@ -145,10 +156,62 @@ async function seedCatalog(project, request) {
   console.log('Catálogo visible actualizado. Los SKU retirados conservan sus referencias.');
 }
 
+async function refreshAvailability(project, request) {
+  assertProject(project);
+  const base = 'projects/' + project + '/databases/(default)/documents';
+  const url = 'https://firestore.googleapis.com/v1/' + base;
+  const revisions = new Map(catalog.availabilityRevisions.map(number => [
+    'MG-' + String(number).padStart(3, '0'), catalog[number - 1],
+  ]));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const documents = [];
+    let pageToken;
+    do {
+      const query = new URLSearchParams({ pageSize: '100' });
+      if (pageToken) query.set('pageToken', pageToken);
+      const page = await request(url + '/manuGamesCatalog?' + query);
+      documents.push(...(page.documents ?? []));
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+    const writes = [];
+    const replenished = [];
+    for (const { name, fields, updateTime } of documents) {
+      if (fields.active?.integerValue !== '1') continue;
+      const sku = fields.sku?.stringValue;
+      const revision = revisions.get(sku);
+      const changes = {};
+      if (revision && fields.name?.stringValue !== revision[1]) changes.name = { stringValue: revision[1] };
+      if (revision && fields.description?.stringValue !== revision[3]) changes.description = { stringValue: revision[3] };
+      if (fields.stock?.integerValue === '0' && (fields.category?.stringValue === 'Juegos' || sku === 'MG-043')) {
+        changes.stock = { integerValue: '10' };
+        replenished.push(sku);
+      }
+      if (Object.keys(changes).length) writes.push({
+        update: { name, fields: changes },
+        updateMask: { fieldPaths: Object.keys(changes) },
+        currentDocument: { updateTime },
+      });
+    }
+    if (!writes.length) {
+      console.log('El catálogo ya tiene la disponibilidad y las fichas solicitadas.');
+      return;
+    }
+    const result = await request(url + ':batchWrite', { method: 'POST', body: JSON.stringify({ writes }) });
+    if (result.status?.length !== writes.length || result.status.some(status => ![0, 9].includes(status.code ?? 0))) {
+      throw new Error('Firebase devolvió un error al actualizar el stock.');
+    }
+    if (result.status.every(status => !status.code)) {
+      console.log('SKU reabastecidos: ' + (replenished.join(', ') || 'ninguno'));
+      return;
+    }
+  }
+  throw new Error('El catálogo cambió durante la actualización. Vuelve a ejecutar disponibilidad.');
+}
+
 async function main() {
   const [operation, project] = process.argv.slice(2);
-  if (!['rules', 'catalog'].includes(operation)) {
-    throw new Error('Usa node deploy/prepare-firestore.cjs rules|catalog ID_PROYECTO en Cloud Shell.');
+  if (!['rules', 'catalog', 'availability'].includes(operation)) {
+    throw new Error('Usa node deploy/prepare-firestore.cjs rules|catalog|availability ID_PROYECTO en Cloud Shell.');
   }
   const token = execFileSync('gcloud', ['auth', 'print-access-token'], { encoding: 'utf8' }).trim();
   const request = async (url, options) => {
@@ -160,11 +223,11 @@ async function main() {
     if (!response.ok) throw new Error(data.error?.message ?? 'Error de Firebase ' + response.status);
     return data;
   };
-  await (operation === 'rules' ? prepareRules : seedCatalog)(project, request);
+  await { rules: prepareRules, catalog: seedCatalog, availability: refreshAvailability }[operation](project, request);
 }
 
 if (require.main === module) main().catch(error => {
   console.error(error.message);
   process.exitCode = 1;
 });
-module.exports = { prepareRules, seedCatalog };
+module.exports = { prepareRules, seedCatalog, refreshAvailability };

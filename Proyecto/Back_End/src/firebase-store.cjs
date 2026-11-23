@@ -8,7 +8,7 @@ const tables = [
   ['categories',['id']], ['products',['id']], ['coupons',['code']],
   ['carts',['session_id','product_id']], ['orders',['id']],
   ['order_items',['order_id','product_id']], ['payments',['order_id']], ['shipments',['order_id']],
-  ['inventory_movements',['id']], ['cases',['id']], ['case_messages',['id']], ['audit_logs',['id']],
+  ['inventory_movements',['id']], ['cases',['id']], ['case_messages',['id']], ['community_comments',['id']], ['audit_logs',['id']],
 ];
 
 function databaseUrl(value){
@@ -94,10 +94,13 @@ function firebaseStore(value, options={}){
     const db=openDatabase(':memory:');
     try {
       if(state!==null)hydrate(db,state);
-      const upgrade = state !== null && [5, 6].some(version => !state.schema_migrations[version]);
+      const upgrade = state !== null && [5, 6, 7, 8].some(version => !state.schema_migrations[version]);
       const persist = write || upgrade;
       const current=persist&&state!==null?snapshot(db):null;
-      if (upgrade) seedCatalog(db);
+      if (upgrade) {
+        db.prepare('INSERT OR IGNORE INTO schema_migrations(version) VALUES(7)').run();
+        seedCatalog(db);
+      }
       const result=await action(db);
       if(persist){
         const updated=snapshot(db);
