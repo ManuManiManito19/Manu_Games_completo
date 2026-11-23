@@ -35,7 +35,7 @@ Angular (http://localhost:4200).
 
 ## Guardar los datos en Firebase
 
-El servidor guarda el catálogo, el inventario, los perfiles, los pedidos, los pagos de prueba y las devoluciones en Realtime Database cuando se configura `FIREBASE_DATABASE_URL`. El navegador utiliza la API de la tienda y las reglas de Firebase bloquean la lectura y la escritura directas. El módulo SQLite incluido en Node.js aplica las reglas de negocio en memoria y Firebase confirma cada cambio con el control de versión ETag. Esto permite usar varias sesiones en la demostración. Cada operación consulta una copia del estado, por lo que el modelo está dimensionado para el tamaño del catálogo académico.
+El servidor guarda el catálogo, el inventario, los perfiles, los pedidos, los pagos de prueba y las devoluciones en Realtime Database cuando se configura `FIREBASE_DATABASE_URL`. El navegador utiliza la API de la tienda y las reglas de Firebase bloquean la lectura y la escritura directas. El servidor aplica las reglas de negocio en memoria con SQLite. Firebase confirma cada cambio con el control de versión ETag. Esto permite usar varias sesiones en la demostración. Cada operación consulta una copia del estado, por lo que el modelo está dimensionado para el tamaño del catálogo académico.
 
 1. Configura Realtime Database en tu proyecto y aplica las reglas privadas con `firebase deploy --only database --project TU_PROYECTO`.
 2. Define `FIREBASE_DATABASE_URL` con la URL de tu instancia en `Back_End/.env`. Para Manu Games es `https://manugames-d4df7-default-rtdb.firebaseio.com`.

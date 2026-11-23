@@ -1,6 +1,6 @@
 # Manu Games
 
-**Manu Games es una tienda académica de videojuegos digitales.** El proyecto permite recorrer una compra completa, desde buscar un juego hasta consultar su entrega o solicitar una devolución. El mismo sistema incluye un panel para gestionar productos, existencias, pedidos y solicitudes. La interfaz usa Angular, la API usa Node.js y la tienda puede guardar sus datos en Firebase Realtime Database o en una base SQLite local.
+**Manu Games es una tienda académica de videojuegos digitales.** El proyecto permite recorrer una compra completa, desde buscar un juego hasta consultar su entrega o solicitar una devolución. El mismo sistema incluye un panel para gestionar productos, existencias, pedidos y solicitudes. La interfaz usa Angular y se comunica con la API de la tienda. Los datos se pueden guardar en Firebase Realtime Database o en una base SQLite local.
 
 El objetivo es demostrar cómo se relacionan las acciones del comprador con las reglas de negocio. Una compra aprobada genera un folio, actualiza el inventario y deja un movimiento consultable. Una devolución resuelta permite comprobar el resultado en el pedido, el pago, el inventario y el historial de atención.
 
@@ -66,7 +66,7 @@ En `Back_End/.env`, proporciona un correo ficticio distinto al del comprador en 
 | Capa | Responsabilidad | Punto de entrada |
 | --- | --- | --- |
 | Interfaz Angular | Vistas públicas, carrito, checkout, cuenta, panel y cliente de la API. | [Componentes de la tienda](Proyecto/src/app/store) |
-| Servidor Node.js | Servicio de la interfaz compilada y rutas JSON. Validación de sesión, rol, origen y CSRF. | [Servidor y módulos](Proyecto/Back_End/src) |
+| Servidor de la tienda | Servicio de la interfaz compilada y rutas JSON. Validación de sesión, rol, origen y CSRF. | [Servidor y módulos](Proyecto/Back_End/src) |
 | Reglas de negocio | Cálculo de importes, aprobación o rechazo de pago, movimientos de inventario, entrega y atención. | [Comercio](Proyecto/Back_End/src/commerce.cjs) · [Solicitudes](Proyecto/Back_End/src/support.cjs) |
 | Firebase Realtime Database y SQLite | Catálogo, usuarios, pedidos, pagos, entregas, movimientos y auditoría. | [Persistencia en Firebase](Proyecto/Back_End/src/firebase-store.cjs) · [Esquema y reportes](Proyecto/Back_End/db) |
 | Pruebas | Escenarios de integración y recorrido automatizado en navegador. | [Pruebas de la tienda](Proyecto/Back_End/test) |
