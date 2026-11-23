@@ -1,5 +1,6 @@
 const { isDeepStrictEqual } = require('node:util');
 const { openDatabase, transaction } = require('./foundation.cjs');
+const { seedCatalog } = require('./commerce.cjs');
 
 const tables = [
   ['schema_migrations',['version']],
@@ -93,9 +94,12 @@ function firebaseStore(value, options={}){
     const db=openDatabase(':memory:');
     try {
       if(state!==null)hydrate(db,state);
-      const current=write&&state!==null?snapshot(db):null;
+      const upgrade = state !== null && [5, 6].some(version => !state.schema_migrations[version]);
+      const persist = write || upgrade;
+      const current=persist&&state!==null?snapshot(db):null;
+      if (upgrade) seedCatalog(db);
       const result=await action(db);
-      if(write){
+      if(persist){
         const updated=snapshot(db);
         if(state===null||!isDeepStrictEqual(current,updated)){
           if(!etag)throw new CloudStorageError('Firebase no devolvió una versión válida de los datos.');

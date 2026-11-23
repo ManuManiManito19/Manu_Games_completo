@@ -77,8 +77,8 @@ async function seedCatalog(project, request) {
   const base = 'projects/' + project + '/databases/(default)/documents';
   const url = 'https://firestore.googleapis.com/v1/' + base + ':batchWrite';
   const categories = ['Juegos', 'DLCs', 'Complementos'];
-  const writes = catalog.map(([category, name, family, description, platform, price, stock, cover], index) => {
-    const id = index + 1;
+  const writes = catalog.slice(catalog.retiredCount).map(([category, name, family, description, platform, price, stock, cover], index) => {
+    const id = index + catalog.retiredCount + 1;
     const sku = 'MG-' + String(id).padStart(3, '0');
     const image = typeof cover === 'string' ? '/games/' + cover : '/covers/' + (cover ?? id) + '.jpg';
     const product = {
@@ -98,6 +98,51 @@ async function seedCatalog(project, request) {
   if (statuses.some(code => code !== 0 && code !== 6)) throw new Error('Algunas fichas no se guardaron: ' + statuses.join(', '));
   console.log(statuses.filter(code => code === 0).length + ' fichas creadas; ' +
     statuses.filter(code => code === 6).length + ' fichas existentes conservadas.');
+  const retirement = Array.from({ length: catalog.retiredCount }, (_, index) => ({
+    update: {
+      name: base + '/manuGamesCatalog/MG-' + String(index + 1).padStart(3, '0'),
+      fields: { active: { integerValue: '0' } },
+    },
+    updateMask: { fieldPaths: ['active'] },
+    currentDocument: { exists: true },
+  }));
+  const hivebusters = catalog[35];
+  retirement.push({
+    update: {
+      name: base + '/manuGamesCatalog/MG-036',
+      fields: {
+        description: { stringValue: hivebusters[3] },
+        platform: { stringValue: hivebusters[4] },
+        image: { stringValue: '/games/' + hivebusters[7] },
+      },
+    },
+    updateMask: { fieldPaths: ['description', 'platform', 'image'] },
+    currentDocument: { exists: true },
+  });
+  for (const number of catalog.complementRevisions) {
+    const [, name, family, description, , , , cover] = catalog[number - 1];
+    const sku = 'MG-' + String(number).padStart(3, '0');
+    retirement.push({
+      update: {
+        name: base + '/manuGamesCatalog/' + sku,
+        fields: {
+          name: { stringValue: name },
+          family: { stringValue: family },
+          description: { stringValue: description },
+          image: { stringValue: '/games/' + cover },
+        },
+      },
+      updateMask: { fieldPaths: ['name', 'family', 'description', 'image'] },
+      currentDocument: { exists: true },
+    });
+  }
+  const revised = await request(url, { method: 'POST', body: JSON.stringify({ writes: retirement }) });
+  if (revised.status.length !== retirement.length ||
+      revised.status.slice(0, catalog.retiredCount).some(status => ![0, 5].includes(status.code ?? 0)) ||
+      revised.status.slice(catalog.retiredCount).some(status => (status.code ?? 0) !== 0)) {
+    throw new Error('No se pudo actualizar el catálogo visible y las portadas.');
+  }
+  console.log('Catálogo visible actualizado. Los SKU retirados conservan sus referencias.');
 }
 
 async function main() {

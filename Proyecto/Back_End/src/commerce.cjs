@@ -14,16 +14,16 @@ const orders = new Map([
   ['featured', "CASE WHEN p.image LIKE '/games/%' THEN 0 ELSE 1 END,p.id DESC"],
 ]);
 
-function seedProducts(db, rows, startingAt=0){
+function seedProducts(db, rows, startingAt=0, preserveSeedIds=false){
   const category=db.prepare('SELECT id FROM categories WHERE name=?');
-  const insert=db.prepare(`INSERT INTO products(sku,category_id,name,family,description,platform,image,price,stock)
-    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(sku) DO NOTHING`);
+  const insert=db.prepare(`INSERT INTO products(id,sku,category_id,name,family,description,platform,image,price,stock)
+    VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(sku) DO NOTHING`);
   const movement=db.prepare(move);
   rows.forEach(([nameOfCategory,name,family,description,platform,price,stock,cover], index)=>{
     const number=startingAt+index+1;
     const sku=`MG-${String(number).padStart(3,'0')}`;
     const image=typeof cover==='string'?'/games/'+cover:`/covers/${cover ?? number}.jpg`;
-    const result=insert.run(sku,category.get(nameOfCategory).id,name,family,description,platform,image,price,stock);
+    const result=insert.run(preserveSeedIds ? number : null,sku,category.get(nameOfCategory).id,name,family,description,platform,image,price,stock);
     if(result.changes&&stock>0)movement.run(result.lastInsertRowid,stock,'seed',null,null);
   });
 }
@@ -34,7 +34,7 @@ function seedCatalog(db) {
     const insertCategory=db.prepare('INSERT OR IGNORE INTO categories(name) VALUES(?)');
     if(empty){
       for(const name of ['Juegos','DLCs','Complementos']) insertCategory.run(name);
-      seedProducts(db,catalog);
+      seedProducts(db,catalog.slice(catalog.retiredCount),catalog.retiredCount,true);
       db.prepare("INSERT OR IGNORE INTO coupons(code,percent,ends_at,max_uses) VALUES('DEMO10',10,'2099-12-31T00:00:00Z',200)").run();
     }
     if(!db.prepare('SELECT version FROM schema_migrations WHERE version=3').get()){
@@ -43,6 +43,27 @@ function seedCatalog(db) {
         seedProducts(db,catalog.slice(36),36);
       }
       db.prepare('INSERT INTO schema_migrations(version) VALUES(3)').run();
+    }
+    if (!db.prepare('SELECT version FROM schema_migrations WHERE version=5').get()) {
+      const retire = db.prepare('UPDATE products SET active=0 WHERE sku=?');
+      const removeFromCart = db.prepare('DELETE FROM carts WHERE product_id IN (SELECT id FROM products WHERE sku=?)');
+      for (let index = 1; index <= catalog.retiredCount; index++) {
+        const sku = 'MG-' + String(index).padStart(3, '0');
+        retire.run(sku);
+        removeFromCart.run(sku);
+      }
+      const hivebusters = catalog[35];
+      db.prepare("UPDATE products SET description=?,platform=?,image=? WHERE sku='MG-036'")
+        .run(hivebusters[3], hivebusters[4], '/games/' + hivebusters[7]);
+      db.prepare('INSERT INTO schema_migrations(version) VALUES(5)').run();
+    }
+    if (!db.prepare('SELECT version FROM schema_migrations WHERE version=6').get()) {
+      const revise = db.prepare('UPDATE products SET name=?,family=?,description=?,image=? WHERE sku=?');
+      for (const number of catalog.complementRevisions) {
+        const [, name, family, description, , , , cover] = catalog[number - 1];
+        revise.run(name, family, description, '/games/' + cover, 'MG-' + String(number).padStart(3, '0'));
+      }
+      db.prepare('INSERT INTO schema_migrations(version) VALUES(6)').run();
     }
   });
 }

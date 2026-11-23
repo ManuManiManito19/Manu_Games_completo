@@ -60,7 +60,7 @@ Verifica `/api/health` en el dominio de Hosting y completa una compra con una cu
 
 ## Vista previa en Firebase Spark
 
-La vista previa conserva el diseño de terminal y ofrece el catálogo, las fichas
+El [sitio publicado](https://manugames-d4df7.web.app) conserva el diseño de terminal y ofrece el catálogo, las fichas
 de producto, el registro, el inicio de sesión y la foto de perfil. El catálogo
 usa la colección `manuGamesCatalog` de Cloud Firestore. Las cuentas usan
 Firebase Authentication y cada perfil se guarda en `manuGamesProfiles/{uid}`.
@@ -70,7 +70,8 @@ La tienda con carrito, pedidos, pagos simulados y administración se ejecuta con
 Activa el proveedor Correo electrónico/contraseña en Firebase Authentication
 y usa una app web asociada al sitio de Hosting. Desde la carpeta `Proyecto` en
 una terminal autenticada con acceso a Firebase y Google Cloud, prepara el catálogo
-y las reglas. Los SKU ya existentes en Firestore conservan sus datos.
+y las reglas. La importación conserva precio y existencia de los SKU ya
+existentes, retira las 16 fichas académicas y actualiza la portada de Hivebusters.
 
 ```bash
 node deploy/prepare-firestore.cjs catalog manugames-d4df7

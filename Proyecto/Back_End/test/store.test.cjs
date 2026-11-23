@@ -72,33 +72,41 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   const qty=id=>db.prepare('SELECT stock FROM products WHERE id=?').get(id).stock;
   const caseDesc={reason:'Código de demostración requiere revisión.'};
   await t.test('E01 catálogo paginado, filtros y ficha con variantes',async()=>{
-    assert.equal((await buyer('GET','/products')).total,43);
+    assert.equal((await buyer('GET','/products')).total,27);
     const categories=await buyer('GET','/categories');
     assert.deepEqual(categories.map(category=>category.name),['Juegos','DLCs','Complementos']);
-    for(const [index,total] of [30,3,10].entries()){
+    for(const [index,total] of [14,3,10].entries()){
       const result=await buyer('GET','/products?category='+categories[index].id);
       assert.equal(result.total,total);
       assert.ok(result.items.every(item=>item.category===categories[index].name));
     }
     const featured=await buyer('GET','/products?sort=featured');
     assert.ok(featured.items.every(item=>item.image.startsWith('/games/')));
-    const result=await buyer('GET','/products?q=Horizonte&max=50000&stock=1&sort=ascending');
+    const result=await buyer('GET','/products?q=PlayStation%20Plus&max=50000&stock=1&sort=ascending');
     assert.equal(result.total,2);
-    assert.equal(result.items[0].sku,'MG-016');
+    assert.equal(result.items[0].sku,'MG-027');
     const initial = await buyer('GET','/products?q=c');
-    assert.equal(initial.total,8);
+    assert.equal(initial.total,5);
     assert.ok(initial.items.every(item=>item.name.startsWith('C')));
-    assert.equal((await buyer('GET','/products?q=Codice')).total,1);
-    assert.equal((await buyer('GET','/products/1')).variants.length,1);
+    assert.equal((await buyer('GET','/products?q=Horizonte')).total,0);
+    await buyer('GET','/products/1',null,404);
+    assert.equal((await buyer('GET','/products/27')).variants.length,1);
+    assert.equal((await buyer('GET','/products/36')).image,'/games/gears-5-hivebusters.jpg');
+    for (const [id, cover] of [
+      [31, 'black-ops-7-cod-points-1100.jpg'], [32, 'gears-e-day-500-hierro.png'],
+      [33, 'ea-fc25-points-1050.png'], [34, 'halo-infinite-credits-1000.png'],
+    ]) {
+      assert.equal((await buyer('GET','/products/'+id)).image, '/games/'+cover);
+    }
     assert.equal((await buyer('GET','/products?q=%25_%27')).total,0);
   });
   await t.test('E02 carrito persistente, modificación, eliminación y stock insuficiente',async()=>{
     await buyer('GET','/auth/session');
-    await buyer('POST','/cart',{productId:1,quantity:2});
-    await buyer('PATCH','/cart/1',{quantity:1});
-    await buyer('POST','/cart',{productId:15,quantity:2},409);
-    await buyer('POST','/cart',{productId:2,quantity:1});
-    await buyer('DELETE','/cart/2');
+    await buyer('POST','/cart',{productId:36,quantity:2});
+    await buyer('PATCH','/cart/36',{quantity:1});
+    await buyer('POST','/cart',{productId:38,quantity:2},409);
+    await buyer('POST','/cart',{productId:22,quantity:1});
+    await buyer('DELETE','/cart/22');
     assert.equal((await buyer('GET','/cart')).items.length,1);
   });
   await t.test('E03 registro con hash, rotación, entrada especial y control por rol/CSRF',async()=>{
@@ -113,7 +121,7 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     const hash=db.prepare('SELECT password_hash FROM users WHERE id=?').get(session.user.id).password_hash;
     assert.match(hash,/^[a-f0-9]{32}:[a-f0-9]{128}$/);
     assert.ok(!hash.includes(syntheticPassword));
-    assert.equal((await buyer('GET','/cart')).items[0].id,1);
+    assert.equal((await buyer('GET','/cart')).items[0].id,36);
     await buyer('GET','/admin/orders',null,403);
     await buyer('POST','/addresses',demoAddress,403,{'x-csrf-token':'invalid'});
     await buyer('POST','/addresses',demoAddress,403,{origin:'https://outside.example'});
@@ -137,9 +145,9 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     assert.equal(order.status,'pending');
     await buyerTwo('GET','/orders/'+order.id,null,404);
     assert.equal((await buyer('POST','/payments/'+order.id+'/confirm',{outcome:'approve'})).status,'paid');
-    const after=qty(1);
+    const after=qty(36);
     await buyer('POST','/payments/'+order.id+'/confirm',{outcome:'approve'});
-    assert.equal(qty(1),after);
+    assert.equal(qty(36),after);
     assert.equal(db.prepare("SELECT delta FROM inventory_movements WHERE reason='sale' AND order_id=?").get(order.id).delta,-1);
   });
   await t.test('E11 conserva la foto de perfil después de volver a iniciar sesión', async () => {
@@ -167,14 +175,14 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     assert.equal(order.status,'delivered');
   });
   await t.test('E06 devolución, información adicional y reembolso sin doble reposición',async()=>{
-    const item=await buyer('POST','/returns',{orderId:order.id,kind:'return',productId:1,...caseDesc},201);
+    const item=await buyer('POST','/returns',{orderId:order.id,kind:'return',productId:36,...caseDesc},201);
     await buyerTwo('POST','/returns',{orderId:order.id,kind:'return',...caseDesc},404);
     await operator('PATCH','/admin/returns/'+item.id,{status:'needs_info',resolution:'Aclara el código de la prueba.'});
     await buyer('POST','/returns/'+item.id+'/messages',{message:'Código de ejemplo sin activar.'});
-    const before=qty(1);
+    const before=qty(36);
     await operator('PATCH','/admin/returns/'+item.id,{status:'approved',action:'refund',resolution:'Se aprueba la devolución de prueba.'});
     await operator('PATCH','/admin/returns/'+item.id,{status:'approved',action:'refund',resolution:'Segundo intento.'},409);
-    assert.equal(qty(1),before+1);
+    assert.equal(qty(36),before+1);
     assert.equal((await buyer('GET','/payments/'+order.id)).status,'refunded');
     assert.equal((await buyer('GET','/returns'))[0].status,'approved');
   });
@@ -184,12 +192,13 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     return user('POST','/orders',{requestKey:key,addressId:address,method:'digital',quotedTotal:quote.total,accepted:true,termsVersion:'2026-11-19'},201);
   };
   await t.test('E07 dos compradores disputan la última unidad y la transacción rechaza al segundo',async()=>{
-    next=await startOrder(buyer,first,15,'concurrencia-demo-01');
-    const competing=await startOrder(buyerTwo,second,15,'concurrencia-demo-02');
+    db.prepare('UPDATE products SET stock=1 WHERE id=41').run();
+    next=await startOrder(buyer,first,41,'concurrencia-demo-01');
+    const competing=await startOrder(buyerTwo,second,41,'concurrencia-demo-02');
     const firstFinish=buyer('POST','/payments/'+next.id+'/confirm',{outcome:'approve'});
     await firstFinish;
     await buyerTwo('POST','/payments/'+competing.id+'/confirm',{outcome:'approve'},409);
-    assert.equal(qty(15),0);
+    assert.equal(qty(41),0);
     assert.equal((await buyerTwo('GET','/payments/'+competing.id)).status,'pending');
     const {id}=await buyerTwo('POST','/returns',{orderId:competing.id,kind:'cancel',reason:'Sin inventario disponible.'},201);
     await operator('PATCH','/admin/returns/'+id,{status:'approved',action:'refund',resolution:'Cancelación de prueba sin pago aprobado.'});
@@ -198,15 +207,15 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   await t.test('E08 garantía con reposición, pago rechazado e inventario intacto',async()=>{
     for(const status of ['preparing','sent','delivered']) await operator('PATCH','/admin/orders/'+next.id,{status});
     const original=await buyer('GET','/orders/'+next.id);
-    guarantee=await buyer('POST','/returns',{orderId:next.id,kind:'warranty',productId:15,...caseDesc},201);
+    guarantee=await buyer('POST','/returns',{orderId:next.id,kind:'warranty',productId:41,...caseDesc},201);
     await operator('PATCH','/admin/returns/'+guarantee.id,{status:'approved',action:'replacement',resolution:'Se generó una reposición académica.'});
     replacement=await buyer('GET','/orders/'+next.id);
     assert.notEqual(replacement.delivery_code,original.delivery_code);
-    await buyerTwo('DELETE','/cart/15');
-    const before=qty(2);
-    declined=await startOrder(buyerTwo,second,2,'rechazo-demo-000001');
+    await buyerTwo('DELETE','/cart/41');
+    const before=qty(22);
+    declined=await startOrder(buyerTwo,second,22,'rechazo-demo-000001');
     assert.equal((await buyerTwo('POST','/payments/'+declined.id+'/confirm',{outcome:'decline'})).payment_status,'declined');
-    assert.equal(qty(2),before);
+    assert.equal(qty(22),before);
   });
   await t.test('E09 políticas, recuperación genérica, cierre de sesión y caducidad',async()=>{
     assert.equal((await buyer('GET','/info')).payment,'simulated');

@@ -48,7 +48,7 @@ export class Store implements OnInit {
     return '/avatars/'+avatar.id+'.png';
   }
   portraitCover(image:string){
-    return /\/(?:gamepass-|playstation-plus-|gow-ragnarok)/.test(image);
+    return /\/(?:gamepass-|playstation-plus-|gow-ragnarok|gears-5-hivebusters|gears-e-day-500-hierro|ea-fc25-points-1050|halo-infinite-credits-1000)/.test(image);
   }
   estado(value:string){return this.labels[value]||value;}
   caseStatus(ticket:SupportCase){

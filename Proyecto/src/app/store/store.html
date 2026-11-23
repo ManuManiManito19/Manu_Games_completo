@@ -230,14 +230,13 @@
         <p>Puedes explorar el catálogo y crear una cuenta de prueba. Los importes del catálogo están en pesos mexicanos. Los pedidos y pagos de prueba se realizan en la versión con servidor.</p>
         <h2>Privacidad del perfil</h2>
         <p>Firebase Authentication gestiona el acceso con correo y contraseña. Tu nombre y foto se guardan en un perfil al que solo puedes acceder con tu cuenta. Usa un nombre de prueba. Puedes cambiar la foto desde Mi cuenta o elegir un avatar.</p>
+        <ng-container [ngTemplateOutlet]="privacyNotice"></ng-container>
       </article>
     } @else {
     <article class="panel policies">
       <h2>Contacto</h2><p>Manu Games Operadora Académica, identidad ficticia. RFC de demostración MGX261119DE0, sin registro fiscal. Domicilio ficticio Av. Ejemplo 100, Nuevo Laredo, Tamaulipas, México. Contacto ilustrativo soporte&#64;manugames.example. Usa el formulario de Mi cuenta para generar un folio de atención. Horario de simulación de lunes a viernes de 09:00 a 17:00, con objetivo de respuesta de un día hábil.</p>
       <h2>Términos de compra</h2><p>Versión {{termsVersion||'2026-11-19'}}. La tienda académica opera en pesos mexicanos. Consulta precio, existencia, compatibilidad, descuento y cargos antes de aceptar el resumen. Cualquier cambio en existencias o precio requiere revisar la compra. Los pedidos y referencias son de prueba. Las portadas y nombres comerciales identifican los productos de la demostración.</p>
-      <h2>Aviso de privacidad</h2>
-      <p>Manu Games Operadora Académica es el responsable ficticio. Usa nombre, correo, foto opcional, dirección de prueba, pedidos y solicitudes para acceso, entrega, soporte y seguridad. El ejercicio prescinde de marketing. Usa datos ficticios e imágenes que tengas permiso de compartir.</p>
-      <p>En Mi cuenta, elige Privacidad y derechos ARCO para solicitar acceso, rectificación, cancelación, oposición o limitar el uso de tus datos. Indica el folio y el dato que quieres revisar. El operador responde por el historial de la solicitud. El equipo prevé cerrar el entorno de evaluación y retirar las copias de práctica en un máximo operativo de 30 días. Los cambios al aviso se publican en esta página.</p>
+      <ng-container [ngTemplateOutlet]="privacyNotice"></ng-container>
       <h2>Entrega digital</h2>
       <p>Cobertura de demostración en México, con entrega para la plataforma indicada en la ficha. El costo de envío es de $0 MXN. La administración prepara el pedido y registra la referencia digital. Al marcarlo Entregado, la licencia simulada aparece en Mi cuenta. El objetivo para la demostración es liberarla en la misma sesión. Si falta la licencia, resulta incompatible o llega duplicada, abre una solicitud desde el pedido.</p>
       <h2>Cancelaciones y devoluciones</h2>
@@ -260,6 +259,20 @@
   }
 </main>
 <footer><div class="wrap footer"><a class="brand" href="#inicio"><span class="mark" aria-hidden="true">M</span> MANU<span>GAMES</span></a><p>Proyecto académico · pagos y licencias de prueba</p><a href="#ayuda">Contacto y políticas</a></div></footer>
+<ng-template #privacyNotice>
+  <h2>Aviso de privacidad integral</h2>
+  <p>Manu Games Operadora Académica es el responsable ficticio del tratamiento. El catálogo en Firebase usa nombre, correo y foto opcional para gestionar el acceso y el perfil. La versión completa también usa domicilio de prueba, pedidos y solicitudes para simular la compra y la entrega, brindar soporte y proteger la cuenta. Utiliza datos ficticios. El proyecto utiliza pagos simulados.</p>
+  <p>El tratamiento se explica conforme a la <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf" target="_blank" rel="noopener noreferrer">Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</a>. Esta página publica las actualizaciones del aviso. Puedes eliminar tu foto al cambiarla por un avatar del catálogo.</p>
+  <h3>Derechos ARCO</h3>
+  <dl>
+    <dt>Acceso</dt><dd>Conoce qué datos se tratan y para qué se utilizan.</dd>
+    <dt>Rectificación</dt><dd>Pide la corrección de datos inexactos, incompletos o desactualizados.</dd>
+    <dt>Cancelación</dt><dd>Solicita el retiro de tus datos cuando proceda conforme a la ley.</dd>
+    <dt>Oposición</dt><dd>Solicita que cese un tratamiento determinado cuando corresponda.</dd>
+  </dl>
+  <p>El aviso original identifica <strong>privacidad&#64;manugames.com</strong> como correo de referencia. En la versión completa puedes registrar una solicitud de práctica desde <a href="#cuenta">Mi cuenta</a>, en <strong>Privacidad y derechos ARCO</strong>. Indica el derecho que quieres ejercer, el dato involucrado y el medio de respuesta. Evita incluir contraseñas o documentos de identidad en la demostración.</p>
+  <p>El artículo 31 prevé hasta 20 días para comunicar la determinación y, si la solicitud procede, 15 días adicionales para hacerla efectiva. La ley contempla ampliaciones justificadas en los supuestos aplicables.</p>
+</ng-template>
 <ng-template #auth>
   <section class="auth" aria-labelledby="access-title">
     <div class="terminal-bar">

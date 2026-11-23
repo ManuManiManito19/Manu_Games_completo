@@ -14,13 +14,13 @@ Proyecto integrador de **Temas Selectos de Tecnología de la Información**, Uni
 | Comprador | Crear una cuenta, registrar un domicilio de prueba, cotizar, aplicar un cupón, aceptar los términos y completar un pago simulado. |
 | Operador | Consultar reportes, administrar productos y categorías, registrar ajustes de inventario, avanzar pedidos, gestionar promociones y resolver solicitudes. |
 
-El catálogo de demostración incluye **43 referencias** y tres filtros principales: **Juegos**, **DLCs** y **Complementos**. Los complementos incluyen monedas, puntos y suscripciones. Cada ficha muestra el SKU, la plataforma, el precio y la disponibilidad. La búsqueda del encabezado funciona con Enter desde cualquier pantalla. Puedes combinar categoría, precio, existencia y orden de resultados. Los productos que comparten una familia aparecen como variantes con precios y existencias propios.
+El catálogo de demostración incluye **27 referencias**: **14 juegos**, **3 DLCs** y **10 complementos**. Los complementos incluyen monedas, puntos y suscripciones. Cada ficha muestra el SKU, la plataforma, el precio y la disponibilidad. La búsqueda del encabezado funciona con Enter desde cualquier pantalla. Puedes combinar categoría, precio, existencia y orden de resultados. Los productos que comparten una familia aparecen como variantes con precios y existencias propios.
 
 La tienda usa el estilo de terminal negra con neón verde del proyecto original. Durante el registro, el comprador puede elegir uno de cinco avatares y cambiarlo después en **Mi cuenta**, donde también consulta sus pedidos, solicitudes y licencias digitales en **Mis productos**. El operador puede pedir información adicional y registrar una resolución. El panel muestra quién ejecutó los cambios y permite distinguir un ajuste administrativo de una venta o un reembolso.
 
 ## Recorrido de demostración
 
-1. Busca **Horizonte** y abre la ficha de **Horizonte de Cobre para PC**, SKU `MG-001`.
+1. Busca **Gears 5: Hivebusters**, DLC con SKU `MG-036`. La ficha indica que requiere el juego base Gears 5.
 2. Agrega dos unidades al carrito. Continúa a checkout y registra o inicia sesión con una cuenta de prueba. El carrito se conserva al cambiar de sesión.
 3. Registra un domicilio ficticio y aplica el cupón `DEMO10`. Con el catálogo inicial, el subtotal es **698.00 MXN**, el descuento es **69.80 MXN** y el total es **628.20 MXN**.
 4. Revisa el desglose, acepta los términos y crea el pedido. El pedido obtiene un folio y queda pendiente hasta que eliges el resultado del simulador.
@@ -29,9 +29,9 @@ La tienda usa el estilo de terminal negra con neón verde del proyecto original.
 
 Es un entorno académico con **pagos, guías y códigos digitales simulados**. La demostración utiliza cuentas, domicilios e importes de prueba.
 
-## Vista previa en Firebase
+## Catálogo publicado en Firebase
 
-[Abrir el catálogo en Firebase Hosting](https://manugames-d4df7--catalogo-rv9owzi0.web.app). La vista previa incluye el catálogo de 43 productos, filtros, registro, inicio de sesión y perfil con foto. El canal caduca el 22 de diciembre de 2026. La demostración local incluye además el carrito, los pagos de prueba, el inventario y la operación administrativa.
+[Abrir Manu Games en Firebase Hosting](https://manugames-d4df7.web.app). El sitio incluye las 27 fichas activas de Firestore, filtros, registro, inicio de sesión, perfil con foto y aviso de privacidad con derechos ARCO. La demostración local incluye además el carrito, los pagos de prueba, el inventario y la operación administrativa.
 
 ## Cómo ejecutarlo en tu equipo
 
@@ -45,7 +45,7 @@ npm ci
 npm run demo
 ```
 
-Abre [127.0.0.1:4200](http://127.0.0.1:4200). El comando crea una base SQLite de prueba, importa los 43 productos y muestra en la terminal las credenciales administrativas generadas para esa ejecución. Registra un comprador con datos ficticios desde **Iniciar sesión → Registrarme**. Para usar el panel, abre una ventana privada y entra con la cuenta que muestra la terminal. Cada reinicio de `npm run demo` crea una base independiente.
+Abre [127.0.0.1:4200](http://127.0.0.1:4200). El comando crea una base SQLite de prueba, importa los 27 productos vigentes y muestra en la terminal las credenciales administrativas generadas para esa ejecución. Registra un comprador con datos ficticios desde **Iniciar sesión → Registrarme**. Para usar el panel, abre una ventana privada y entra con la cuenta que muestra la terminal. Cada reinicio de `npm run demo` crea una base independiente.
 
 El [endpoint de salud](http://127.0.0.1:4200/api/health) indica qué base está activa. La [guía de Firebase](Proyecto/README.md#guardar-los-datos-en-firebase) explica la conexión a Realtime Database y la publicación en Hosting con Cloud Run.
 

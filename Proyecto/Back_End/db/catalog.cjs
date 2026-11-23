@@ -29,18 +29,22 @@ module.exports = [
   ["Complementos", "PlayStation Plus Essential — 3 meses", "PlayStation Plus Essential", "Acceso de demostración al plan de suscripción por el periodo indicado.", "PS4 / PS5", 39900, 20, "playstation-plus-3-meses.jpg"],
   ["Complementos", "Xbox Game Pass Ultimate — 1 mes", "Xbox Game Pass Ultimate", "Acceso de demostración al plan de suscripción por el periodo indicado.", "Xbox / PC", 33900, 20, "gamepass-1-mes.jpg"],
   ["Complementos", "Xbox Game Pass Ultimate — 3 meses", "Xbox Game Pass Ultimate", "Acceso de demostración al plan de suscripción por el periodo indicado.", "Xbox / PC", 99900, 20, "gamepass-3-meses.jpg"],
-  ["Complementos", "Call of Duty: Black Ops 6 — 1,100 puntos COD", "Call of Duty: Black Ops 6 — 1,100 puntos COD", "Puntos COD para contenido compatible dentro del juego. Canje de demostración para Xbox.", "Xbox", 19900, 30, 12],
-  ["Complementos", "Gears 5 — 500 Iron", "Gears 5 — 500 Iron", "Moneda virtual de Gears 5 para adquirir contenido compatible en la tienda del juego.", "Xbox", 9900, 30, 9],
-  ["Complementos", "EA Sports FC 25 — 1,050 FC Points", "EA Sports FC 25 — 1,050 FC Points", "Puntos para contenido de Ultimate Team en EA Sports FC 25.", "Xbox", 19900, 25, 2],
-  ["Complementos", "Halo Infinite — 1,000 créditos", "Halo Infinite — 1,000 créditos", "Créditos para personalización y contenido compatible en el multijugador de Halo Infinite.", "Xbox", 19900, 25, 6],
+  ["Complementos", "Call of Duty: Black Ops 7 - 1,100 COD Points", "Call of Duty: Black Ops 7 - 1,100 COD Points", "Paquete de 1,100 puntos COD para contenido compatible dentro de Call of Duty. Ficha de demostración para Xbox.", "Xbox", 19900, 30, "black-ops-7-cod-points-1100.jpg"],
+  ["Complementos", "Gears of War: E-Day - 500 de hierro", "Hierro de Gears of War: E-Day", "Paquete de 500 de hierro para la demostración de Gears of War: E-Day. Disponibilidad comercial por confirmar.", "Xbox", 9900, 30, "gears-e-day-500-hierro.png"],
+  ["Complementos", "EA Sports FC 25 - 1,050 FC Points", "EA Sports FC 25 - 1,050 FC Points", "Puntos para contenido de Ultimate Team en EA Sports FC 25.", "Xbox", 19900, 25, "ea-fc25-points-1050.png"],
+  ["Complementos", "Halo Infinite - 1,000 créditos", "Halo Infinite - 1,000 créditos", "Créditos para personalización y contenido compatible en el multijugador de Halo Infinite.", "Xbox", 19900, 25, "halo-infinite-credits-1000.png"],
   ["Complementos", "Red Dead Online — 25 lingotes de oro", "Red Dead Online — 25 lingotes de oro", "Moneda virtual de Red Dead Online para adquirir artículos y contenido dentro del juego. Requiere acceso a Red Dead Online.", "Xbox One", 19900, 25, "rdo-lingotes.jpg"],
-  ["DLCs", "Gears 5: Hivebusters", "Gears 5: Hivebusters", "Expansión de campaña protagonizada por el escuadrón Scorpio. Requiere Gears 5.", "Xbox", 34900, 15, 9],
+  ["DLCs", "Gears 5: Hivebusters", "Gears 5: Hivebusters", "Expansión de campaña en la que Lahni, Keegan y Mac forman el escuadrón Scorpio para destruir una colmena del Enjambre. Requiere el juego base Gears 5.", "Xbox One / Xbox Series X|S / PC", 34900, 15, "gears-5-hivebusters.jpg"],
   ["Juegos", "Call of Duty: Black Ops 7", "Call of Duty: Black Ops 7", "Juego de acción con campaña, multijugador y Zombis.", "PC / Xbox / PlayStation", 139900, 18, "blackops7.jpg"],
   ["Juegos", "Gears of War: E-Day", "Gears of War: E-Day", "Ficha de referencia del juego sobre el Día de la Emergencia. Disponibilidad por confirmar.", "Xbox / PC", 139900, 0, "gears-e-day.jpg"],
   ["Juegos", "Elden Ring: Tarnished Edition", "Elden Ring: Tarnished Edition", "Ficha de referencia de la edición Tarnished. Disponibilidad por confirmar.", "Nintendo Switch 2", 119900, 0, "elden-ring-tarnished.png"],
   ["Juegos", "God of War", "God of War", "Aventura de Kratos y Atreus por los reinos nórdicos.", "PC / PlayStation", 79900, 10, "god-of-war.jpg"],
   ["Juegos", "Minecraft", "Minecraft", "Juego de construcción y exploración en mundos de bloques.", "PC / Consolas", 69900, 16, "minecraft.jpg"],
   ["Juegos", "Elden Ring Nightreign", "Elden Ring Nightreign", "Aventura independiente de acción y supervivencia cooperativa.", "PC / Xbox / PlayStation", 89900, 14, "nightreign.jpg"],
-  ["Complementos", "Gears of War: E-Day — 1,000 Iron (demo)", "Gears of War: E-Day — 1,000 Iron (demo)", "Ejemplo de microtransacción para la demostración. Disponibilidad por confirmar.", "Xbox", 19900, 0, "gears-iron-1000.png"]
+  ["Complementos", "Gears of War: E-Day - 1,000 Iron (demo)", "Hierro de Gears of War: E-Day", "Ejemplo de microtransacción para la demostración. Disponibilidad por confirmar.", "Xbox", 19900, 0, "gears-iron-1000.png"]
   // Los SKU semilla siguen el orden del listado. Agrega nuevas referencias al final.
 ];
+
+// Retain the original SKU positions for historical orders and cloud documents.
+module.exports.retiredCount = 16;
+module.exports.complementRevisions = [31, 32, 33, 34, 43];

@@ -6,10 +6,10 @@ El PDF «Diseño y desarrollo de una tienda virtual» del proyecto integrador de
 
 | ID | Precondición y datos | Pasos y resultado esperado | Resultado obtenido y evidencia |
 | --- | --- | --- | --- |
-| 18 | Catálogo inicial de 43 fichas | Buscar `Horizonte`, filtrar por existencia y abrir un resultado. Aparecen dos variantes y se muestra la ficha con SKU. | Aprobado en E01. |
+| 18 | Catálogo inicial de 27 fichas | Busca PlayStation Plus para comprobar sus variantes y abre la ficha MG-036 para verificar la portada de Hivebusters. Busca Horizonte y verifica que quedó fuera del catálogo. | Aprobado en E01. |
 | 19 | Sesión de visitante abierta | Agregar dos unidades, cambiar a una y eliminar una segunda partida. El carrito conserva la primera y recalcula el subtotal. | Aprobado en E02. |
-| 20 | `MG-015` tiene una unidad | Intentar añadir dos. La API responde 409. Dos clientes intentan confirmar la última unidad y solo uno puede comprarla. | Aprobado en E02 y E07. |
-| 21 | Comprador autenticado, dirección de prueba y `DEMO10` | Cotizar una unidad de `MG-001`, aceptar términos y aprobar el pago simulado. El total es $314.10 MXN y se obtiene un folio `MG-`. Repetir la solicitud conserva el folio. | Aprobado en E04. |
+| 20 | `MG-038` está agotado y la prueba ajusta `MG-041` a una unidad | Intenta añadir el juego agotado. Dos clientes intentan confirmar la última unidad de la segunda ficha y solo uno puede comprarla. | Aprobado en E02 y E07. |
+| 21 | Comprador autenticado, dirección de prueba y `DEMO10` | Cotiza una unidad de `MG-036`, acepta términos y aprueba el pago simulado. El total es $314.10 MXN. Repetir la solicitud conserva el folio. | Aprobado en E04. |
 | 22 | Pedido pagado y cuenta administrativa | Cambiar el pedido a En preparación, Enviado y Entregado. Se generan guía y licencia de demostración. Un salto directo a Entregado recibe 409. | Aprobado en E05. |
 | 23 | Compra confirmada | Consultar movimientos de inventario. La venta de una unidad registra `delta=-1`; repetir el pago conserva el saldo y el movimiento. | Aprobado en E04. |
 | 24 | Pedido entregado del propio cliente | Abrir devolución, responder aclaración y resolver con reembolso. El folio aparece al comprador y la unidad vuelve una sola vez. | Aprobado en E06. E08 cubre garantía y rechazo de pago. |
@@ -24,9 +24,9 @@ Los casos E01–E11 están en [store.test.cjs](../Proyecto/Back_End/test/store.t
 
 | Comprobación | Resultado del 22 de noviembre de 2026 |
 | --- | --- |
-| Firestore | 43 documentos públicos de catálogo con nombre, descripción y precio, en 30 juegos, 3 DLCs y 10 complementos. |
-| Realtime Database | 43 claves de producto en `manuGames/products`. Es la base privada que usa la API en su configuración de nube. |
-| Firebase Hosting | La [vista previa](https://manugames-d4df7--catalogo-rv9owzi0.web.app) devolvió Angular y la portada de prueba por HTTPS. |
+| Firestore | 27 fichas activas en 14 juegos, 3 DLCs y 10 complementos. Las 16 referencias retiradas quedaron inactivas. |
+| Realtime Database | La base privada `manuGames/products` confirma 27 fichas activas y 16 inactivas. Conserva pedidos y referencias históricas. |
+| Firebase Hosting | El [sitio principal](https://manugames-d4df7.web.app) entregó por HTTPS la compilación con el aviso ARCO y la portada de Hivebusters. El archivo servido coincide con la imagen aportada. |
 | Firebase Authentication | Una cuenta ficticia pudo registrarse, guardar el perfil y consultar los datos tras volver a entrar. La lectura anónima del mismo perfil fue denegada. |
 | Compra en la nube | Pendiente de habilitar Cloud Run y la facturación de Blaze. Se puede reproducir el flujo completo en SQLite local. |
 
