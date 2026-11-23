@@ -149,15 +149,15 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
     assert.ok(!(await buyerTwo('GET','/returns')).some(ticket=>ticket.reason===privateReason));
     assert.ok((await buyer('GET','/returns')).some(ticket=>ticket.reason===privateReason));
   });
-  await t.test('E04 precio en servidor, cupón, términos, folio e idempotencia',async()=>{
+  await t.test('E04 precio en servidor, cupón, método de pago, folio e idempotencia',async()=>{
     const quote=await buyer('POST','/quote',{coupon:'DEMO10',price:1});
     assert.deepEqual([quote.subtotal,quote.discount,quote.shipping,quote.tax,quote.total],[34900,3490,0,0,31410]);
-    const data={requestKey:'checkout-10000000001',addressId:first,method:'digital',paymentMethod:'paypal',coupon:'DEMO10',quotedTotal:quote.total,termsVersion:'2026-11-19',accepted:true};
+    const data={requestKey:'checkout-10000000001',addressId:first,method:'digital',paymentMethod:'paypal',coupon:'DEMO10',quotedTotal:quote.total};
     await buyer('POST','/orders',{...data,quotedTotal:1},409);
-    await buyer('POST','/orders',{...data,accepted:false},409);
     await buyer('POST','/orders',{...data,paymentMethod:null},400);
     order=await buyer('POST','/orders',data,201);
     assert.equal(order.payment_method,'paypal');
+    assert.equal(order.consent_at,null);
     assert.match(order.folio,/^MG-/);
     assert.equal((await buyer('POST','/orders',data,201)).id,order.id);
     assert.equal(order.status,'pending');
@@ -207,7 +207,7 @@ test('Tienda de extremo a extremo con persistencia y autorización',async t=>{
   const startOrder=async(user,address,id,key)=>{
     await user('POST','/cart',{productId:id,quantity:1});
     const quote=await user('POST','/quote',{});
-    return user('POST','/orders',{requestKey:key,addressId:address,method:'digital',paymentMethod:'card',quotedTotal:quote.total,accepted:true,termsVersion:'2026-11-19'},201);
+    return user('POST','/orders',{requestKey:key,addressId:address,method:'digital',paymentMethod:'card',quotedTotal:quote.total},201);
   };
   await t.test('E07 dos compradores disputan la última unidad y la transacción rechaza al segundo',async()=>{
     db.prepare('UPDATE products SET stock=1 WHERE id=41').run();

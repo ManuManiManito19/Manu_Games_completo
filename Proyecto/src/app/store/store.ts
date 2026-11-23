@@ -3,9 +3,7 @@ import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@ang
 import { StoreApi, Address, Cart, Catalog, Category, Order, OrderSummary, PaymentMethod, Product, PurchasedProduct, Quote, StoreComment, SupportCase, User, labels, mx, paymentLabels, values } from './api';
 import { Manager } from './manager';
 import { encodeAvatar, isUploadedAvatar } from './avatar';
-import { minimumCardMonth, validateDemoPayment } from './checkout-payment';
-
-type TermsContext = 'checkout' | 'register';
+import { demoHolders, minimumCardMonth, validateDemoPayment } from './checkout-payment';
 
 @Component({
   selector:'app-store', imports:[Manager,NgTemplateOutlet], templateUrl:'./store.html', styleUrl:'./store.css'
@@ -30,13 +28,12 @@ export class Store implements OnInit {
   payment?:Order;
   coupon='';
   addressId=0;
-  selectedTermsVersion='';
   requestKey='';
   pendingAddressId=0;
   paymentMethod:PaymentMethod|''='';
   readonly paymentLabels=paymentLabels;
-  readonly termsAccepted:Record<TermsContext,boolean>={checkout:false,register:false};
-  termsContext:TermsContext='checkout';
+  readonly demoHolders=demoHolders;
+  registrationTermsAccepted=false;
   termsVersion='';
   labels=labels;
   readonly avatars=[
@@ -114,7 +111,6 @@ export class Store implements OnInit {
       this.addresses=this.preview?[]:await this.api.call<Address[]>('/addresses');
       this.addressId=this.addresses[0]?.id||0;
       this.paymentMethod='';
-      this.termsAccepted.checkout=false;
       this.payment=undefined;
       this.quote=undefined;
       if(this.cartCount) await this.refreshQuote();
@@ -188,8 +184,8 @@ export class Store implements OnInit {
       }
       delete data['confirmPassword'];
       if (this.authMode === 'register') await this.readAvatar(event, data);
-      const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:this.termsAccepted.register});
-      this.termsAccepted.register=false;
+      const s=await this.api.authenticate('/auth/'+(this.authMode==='register'?'register':'login'),{...data,accepted:this.registrationTermsAccepted});
+      this.registrationTermsAccepted=false;
       this.user=s.user;
       this.termsVersion=s.termsVersion;
       this.cart=await this.api.call<Cart>('/cart');
@@ -248,7 +244,6 @@ export class Store implements OnInit {
   async refreshQuote(){
     this.quote=undefined;
     this.quote=await this.api.call<Quote>('/quote','POST',{coupon:this.coupon});
-    this.selectedTermsVersion=this.termsVersion;
     this.requestKey=crypto.randomUUID();
   }
   updateCoupon(event:Event){
@@ -259,25 +254,25 @@ export class Store implements OnInit {
     this.paymentMethod=value==='card'||value==='paypal'?value:'';
     this.error='';
   }
-  showTerms(context:TermsContext,dialog:HTMLDialogElement){
-    this.termsContext=context;
-    dialog.showModal();
+  keepDigits(input:HTMLInputElement,length:number){
+    const clean=input.value.replace(/[^0-9]/g,'').slice(0,length);
+    if(input.value!==clean)input.value=clean;
   }
-  toggleTerms(event:MouseEvent,context:TermsContext,dialog:HTMLDialogElement){
-    if(this.termsAccepted[context]){
-      this.termsAccepted[context]=false;
+  toggleTerms(event:MouseEvent,dialog:HTMLDialogElement){
+    if(this.registrationTermsAccepted){
+      this.registrationTermsAccepted=false;
       return;
     }
     event.preventDefault();
-    this.showTerms(context,dialog);
+    dialog.showModal();
   }
   acceptTerms(dialog:HTMLDialogElement){
-    this.termsAccepted[this.termsContext]=true;
+    this.registrationTermsAccepted=true;
     dialog.close();
   }
   reviewPurchase(event:Event, dialog:HTMLDialogElement){
     const data=values(event);
-    if(!this.quote||!this.termsAccepted.checkout)return;
+    if(!this.quote)return;
     try{this.paymentMethod=validateDemoPayment(data);}
     catch(error){
       this.error=error instanceof Error?error.message:'Revisa los datos de pago de prueba.';
@@ -290,11 +285,11 @@ export class Store implements OnInit {
   place(dialog:HTMLDialogElement){
     dialog.close();
     return this.run(async()=>{
-      if(!this.quote||!this.paymentMethod||!this.termsAccepted.checkout)return;
+      if(!this.quote||!this.paymentMethod)return;
       // El identificador de la cotización se mantiene durante los reintentos.
       this.payment=await this.api.call<Order>('/orders','POST',{
         addressId:this.pendingAddressId,method:'digital',paymentMethod:this.paymentMethod,coupon:this.coupon,
-        quotedTotal:this.quote.total,accepted:true,termsVersion:this.selectedTermsVersion,requestKey:this.requestKey
+        quotedTotal:this.quote.total,requestKey:this.requestKey
       });
       if(this.preview){
         const orderId=this.payment.id;

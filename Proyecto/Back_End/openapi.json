@@ -2996,7 +2996,7 @@
                   "status": "pending",
                   "total": 31410,
                   "payment_status": "pending",
-                  "terms_version": "2026-11-19"
+                  "payment_method": "card"
                 }
               }
             }
@@ -3102,8 +3102,6 @@
                 "method": "digital",
                 "paymentMethod": "card",
                 "quotedTotal": 31410,
-                "accepted": true,
-                "termsVersion": "2026-11-19",
                 "coupon": "DEMO10"
               },
               "schema": {
@@ -3137,18 +3135,6 @@
                     "enum": ["card", "paypal"],
                     "description": "Método simulado. El cliente valida los datos de prueba y envía únicamente esta selección."
                   },
-                  "accepted": {
-                    "type": "boolean",
-                    "examples": [
-                      true
-                    ]
-                  },
-                  "termsVersion": {
-                    "type": "string",
-                    "examples": [
-                      "2026-11-19"
-                    ]
-                  },
                   "coupon": {
                     "type": "string",
                     "examples": [
@@ -3161,9 +3147,7 @@
                   "addressId",
                   "method",
                   "paymentMethod",
-                  "quotedTotal",
-                  "accepted",
-                  "termsVersion"
+                  "quotedTotal"
                 ]
               }
             }

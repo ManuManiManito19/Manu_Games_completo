@@ -23,7 +23,7 @@ export interface PurchasedProduct {
 export interface Order extends OrderSummary {
   user_id: number; subtotal:number; discount:number; shipping:number; tax:number; payment_status:string;
   payment_method?:PaymentMethod|null;
-  reference:string; tracking:string|null; delivery_code:string|null; terms_version:string; consent_at:string;
+  reference:string; tracking:string|null; delivery_code:string|null; terms_version?:string|null; consent_at?:string|null;
   items:{ product_id:number; sku:string; name:string; description:string; unit_price:number; quantity:number; platform?:string }[];
   address:Address; history:{detail:string;created_at:string}[];
 }

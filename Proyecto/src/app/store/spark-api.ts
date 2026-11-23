@@ -5,7 +5,7 @@ type Field = { stringValue: string } | { integerValue: string } | { timestampVal
   | { nullValue: null } | { arrayValue: { values?: Field[] } } | { mapValue: { fields: Record<string,Field> } };
 type Document = { name: string; fields: Record<string, Field> };
 type CartLine = { productId: number; quantity: number };
-type OrderInput = { accepted: boolean; termsVersion: string; quotedTotal: number; coupon: string; requestKey: string; paymentMethod: PaymentMethod };
+type OrderInput = { quotedTotal: number; coupon: string; requestKey: string; paymentMethod: PaymentMethod };
 type CaseInput = { kind: string; reason: string; orderId?: string; productId?: number };
 type CommentInput = { body: string; publish: boolean };
 type Tokens = { localId: string; idToken: string; refreshToken: string; expiresIn: string; email: string };
@@ -300,14 +300,13 @@ export class SparkApi {
   private async order(tokens: Tokens,id:string): Promise<Order> {
     const record=docValue(await this.firestore<Document>('/'+this.orderPath(tokens,id),{headers:this.authHeaders(tokens)}));
     return { ...record, payment_status:record['status']==='refunded'?'refunded':'approved',
-      consent_at:record['created_at'], reference:'SIM-'+id.slice(0,12).toUpperCase(),
+      reference:'SIM-'+id.slice(0,12).toUpperCase(),
       shipping:0,tax:0,history:[{detail:'Compra de prueba confirmada',created_at:record['created_at']}] } as unknown as Order;
   }
 
   private async place(input: OrderInput) {
     const tokens=await this.requireLogin();
     const path=this.orderPath(tokens,input.requestKey);
-    if(input.accepted!==true||input.termsVersion!==anonymous().termsVersion)throw new Error('Acepta los términos vigentes.');
     if(input.paymentMethod!=='card'&&input.paymentMethod!=='paypal')throw new Error('Selecciona Tarjeta o PayPal.');
     try { return await this.order(tokens,input.requestKey); }
     catch(error){if(!(error instanceof FirebaseRequestError&&error.status===404))throw error;}
@@ -317,7 +316,7 @@ export class SparkApi {
       platform:item.platform,unit_price:item.price,quantity:item.quantity}));
     await this.create(path,{
       folio:'MG-'+input.requestKey.toUpperCase(),status:'paid',items,skus:items.map(item=>item.sku),
-      terms_version:input.termsVersion,payment_method:input.paymentMethod,subtotal:totals.subtotal,discount:totals.discount,total:totals.total,
+      payment_method:input.paymentMethod,subtotal:totals.subtotal,discount:totals.discount,total:totals.total,
     },tokens);
     sessionStorage.removeItem(cartKey);
     return this.order(tokens,input.requestKey);

@@ -1,14 +1,24 @@
 import type { PaymentMethod } from './api';
 
-export const demoCard = '4242424242424242';
-export const demoCode = '123';
-const firstYear = 2026;
+export const demoHolders = ['Cliente de prueba', 'Jugador ficticio', 'Titular de demostración'];
+const firstYear = 2027;
 const msPerDay = 24 * 60 * 60 * 1000;
 
 export function minimumCardMonth(now = new Date()): string {
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const minimum = new Date(Math.max(Date.UTC(firstYear, 0, 1), today + 30 * msPerDay));
   return minimum.toISOString().slice(0, 7);
+}
+
+function validCardNumber(number: string): boolean {
+  if (!/^[1-9][0-9]{15}$/.test(number)) return false;
+  let sum = 0;
+  for (let position = 0; position < number.length; position++) {
+    const digit = Number(number[position]);
+    const amount = position % 2 === 0 ? digit * 2 : digit;
+    sum += amount > 9 ? amount - 9 : amount;
+  }
+  return sum % 10 === 0;
 }
 
 export function validateDemoPayment(data: Record<string,string>): PaymentMethod {
@@ -19,14 +29,12 @@ export function validateDemoPayment(data: Record<string,string>): PaymentMethod 
     return 'paypal';
   }
   if (data['paymentMethod'] !== 'card') throw new Error('Selecciona Tarjeta o PayPal.');
-  const holder = data['cardholder']?.trim() ?? '';
-  if (holder.length < 2 || holder.length > 90) throw new Error('Escribe el nombre del titular de prueba.');
-  if (data['cardNumber']?.replaceAll(' ', '') !== demoCard || data['cardCode'] !== demoCode) {
-    throw new Error('Usa el número 4242 4242 4242 4242 y el código 123 de la tarjeta de prueba.');
-  }
+  if (!demoHolders.includes(data['cardholder'])) throw new Error('Selecciona un titular ficticio.');
+  if (!validCardNumber(data['cardNumber'] ?? '')) throw new Error('Escribe un número de tarjeta ficticio de 16 dígitos con dígito de control válido.');
+  if (!/^[0-9]{3}$/.test(data['cardCode'] ?? '')) throw new Error('Escribe un código de seguridad de tres dígitos.');
   const expiry = data['cardExpiry'] ?? '';
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(expiry) || expiry < minimumCardMonth()) {
-    throw new Error('Usa una fecha desde 2026 con al menos 30 días de vigencia.');
+    throw new Error('Usa una fecha desde enero de 2027 con al menos 30 días de vigencia.');
   }
   return 'card';
 }

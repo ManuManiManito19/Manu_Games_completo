@@ -65,10 +65,11 @@ con confirmación de productos, plataformas, cantidades y total. En Spark el ped
 al confirmar. No hay cobro ni entrega de licencias. El inventario de referencia limita las cantidades del
 pedido y el simulador Spark no descuenta las existencias compartidas.
 
-En el checkout se elige **Tarjeta** o **PayPal**. La tarjeta usa el número de prueba
-`4242 4242 4242 4242`, el código `123` y un vencimiento desde 2026 con al menos 30 días
-de vigencia. PayPal pide un correo de prueba válido. Solo se envía y se guarda el método elegido.
-Los términos se leen y aceptan en una ventana dentro del formulario.
+En el checkout se elige **Tarjeta** o **PayPal**. La tarjeta se simula con un titular
+ficticio, un número de 16 dígitos que pasa el algoritmo de Luhn, cualquier código de tres
+dígitos y un vencimiento desde enero de 2027 con al menos 30 días de vigencia. PayPal pide
+un correo de prueba válido. Solo se envía y se guarda el método elegido.
+La ventana de términos se abre en el registro de la cuenta.
 
 - **Comentarios** publica el nombre de perfil o gamertag y el texto confirmado por el usuario.
 - **Devoluciones** permite elegir un pedido, indicar el motivo y obtener un folio privado de devolución, cancelación o garantía.

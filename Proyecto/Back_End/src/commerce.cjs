@@ -1,4 +1,4 @@
-const { audit, field, integer, requireValue, searchKey, termsVersion, token, transaction } = require('./foundation.cjs');
+const { audit, field, integer, requireValue, searchKey, token, transaction } = require('./foundation.cjs');
 const catalog = require('../db/catalog.cjs');
 const listProducts = 'SELECT p.*,c.name category FROM products p JOIN categories c ON c.id=p.category_id';
 const cartItems = `SELECT p.*,c.active category_active,i.quantity FROM carts i JOIN products p ON p.id=i.product_id
@@ -149,7 +149,8 @@ function orderDetail(db, id, user) {
   const { request_key, address_snapshot, ...visible }=order;
   const items=db.prepare('SELECT product_id,sku,name,description,platform,unit_price,quantity FROM order_items WHERE order_id=?').all(id);
   const history=db.prepare("SELECT detail,created_at FROM audit_logs WHERE entity='order' AND entity_id=? ORDER BY id").all(String(id));
-  return {...visible,address:JSON.parse(address_snapshot),items,history,
+  return {...visible,terms_version:visible.terms_version||null,consent_at:visible.consent_at||null,
+    address:JSON.parse(address_snapshot),items,history,
     delivery_code: order.status==='delivered' ? `DEMO-${order.tracking?.slice(4) || order.folio.slice(3)}` : null };
 }
 function library(db, userId){
@@ -171,7 +172,6 @@ function createOrder(db, session, input) {
   return transaction(db,()=>{
     const previous=db.prepare('SELECT id FROM orders WHERE user_id=? AND request_key=?').get(session.user.id,key);
     if(previous) return orderDetail(db,previous.id,session.user);
-    requireValue(input.accepted===true && input.termsVersion===termsVersion,'Acepta la versión vigente de los términos.',409);
     requireValue(input.method==='digital','Método de entrega inválido.');
     requireValue(['card','paypal'].includes(input.paymentMethod),'Selecciona Tarjeta o PayPal.');
     const address=db.prepare('SELECT recipient,street,city,region,postal_code FROM addresses WHERE id=? AND user_id=?')
@@ -180,14 +180,14 @@ function createOrder(db, session, input) {
     const totals = quote(db,session.id,input);
     requireValue(input.quotedTotal===totals.total,'El total cambió. Revisa y confirma nuevamente.',409);
     const current=db.prepare(`INSERT INTO orders(folio,user_id,request_key,address_snapshot,subtotal,discount,shipping,tax,total,coupon_code,status,terms_version,consent_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,'pending',?,?)`).run('MG-'+token().slice(0,12).toUpperCase(),session.user.id,key,JSON.stringify(address),totals.subtotal,totals.discount,0,0,totals.total,totals.code,termsVersion,new Date().toISOString());
+      VALUES(?,?,?,?,?,?,?,?,?,?,'pending','','')`).run('MG-'+token().slice(0,12).toUpperCase(),session.user.id,key,JSON.stringify(address),totals.subtotal,totals.discount,0,0,totals.total,totals.code);
     const id=Number(current.lastInsertRowid);
     for(const item of totals.items) db.prepare('INSERT INTO order_items VALUES(?,?,?,?,?,?,?,?)')
       .run(id,item.id,item.sku,item.name,item.description,item.platform,item.price,item.quantity);
     db.prepare("INSERT INTO payments(order_id,reference,amount,status,method) VALUES(?,?,?,'pending',?)")
       .run(id,'SIM-'+token().slice(0,12),totals.total,input.paymentMethod);
     db.prepare("INSERT INTO shipments(order_id,method,status) VALUES(?,'digital','pending')").run(id);
-    audit(db,session.user.id,'order_placed','order',id,'Pedido pendiente y términos aceptados');
+    audit(db,session.user.id,'order_placed','order',id,'Pedido pendiente de pago');
     return orderDetail(db,id,session.user);
   });
 }
